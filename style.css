@@ -1,0 +1,470 @@
+:root {
+  --bg: #0b1220;
+  --card: #121a2b;
+  --muted: #9fb1d1;
+  --text: #e8efff;
+  --accent: #e53e3e;
+  --accent2: #ff5a5a;
+  --verde: #2f9e6e;
+  --giallo: #ffe08a;
+  --giallo-scuro: #8a6d1a;
+  --border: rgba(255, 255, 255, 0.08);
+}
+
+* { box-sizing: border-box; }
+
+body {
+  margin: 0;
+  font-family: system-ui, -apple-system, "Segoe UI", Roboto, Arial, sans-serif;
+  background: radial-gradient(900px 450px at 20% 0%, #15254a 0%, var(--bg) 55%);
+  color: var(--text);
+}
+
+/* ---------- barra superiore ---------- */
+.topbar {
+  padding: 10px 16px;
+  display: flex;
+  gap: 16px;
+  align-items: center;
+  justify-content: space-between;
+  border-bottom: 1px solid var(--border);
+  position: sticky;
+  top: 0;
+  z-index: 1200;
+  backdrop-filter: blur(10px);
+  background: rgba(11, 18, 32, 0.82);
+}
+
+.brand { display: flex; flex-direction: column; }
+.brand h1 { font-size: 17px; margin: 0; letter-spacing: 0.2px; font-weight: 800; }
+.brand-sub { color: var(--muted); font-size: 11px; }
+
+#search {
+  flex: 1 1 auto;
+  max-width: 520px;
+  padding: 10px 12px;
+  border-radius: 10px;
+  border: 1px solid var(--border);
+  background: rgba(0, 0, 0, 0.25);
+  color: var(--text);
+  outline: none;
+  font-size: 14px;
+}
+#search::placeholder { color: var(--muted); }
+
+.topbar-actions { display: flex; align-items: center; gap: 10px; }
+.contatore { color: var(--muted); font-size: 12px; }
+
+/* Campo password per sbloccare il tasto «✕»: stretto, discreto, in alto
+   accanto ai pulsanti. Sbloccato diventa «🔓»; sbagliata trema. */
+.pass-admin {
+  width: 110px;
+  padding: 7px 10px;
+  border-radius: 10px;
+  border: 1px solid var(--border);
+  background: rgba(0, 0, 0, 0.25);
+  color: var(--text);
+  outline: none;
+  font-size: 13px;
+  text-align: center;
+}
+.pass-admin::placeholder { color: var(--muted); }
+.pass-admin:focus { border-color: rgba(255, 255, 255, 0.3); }
+.pass-admin.sbloccato {
+  border-color: var(--verde);
+  color: var(--verde);
+  cursor: pointer;
+  width: 64px;
+}
+.pass-admin.errore { animation: passa-errore 0.35s; border-color: var(--accent2); }
+@keyframes passa-errore {
+  0%, 100% { transform: translateX(0); }
+  25% { transform: translateX(-5px); }
+  50% { transform: translateX(5px); }
+  75% { transform: translateX(-3px); }
+}
+
+/* ---------- layout ---------- */
+.layout {
+  display: grid;
+  grid-template-columns: 1.4fr 0.85fr;
+  gap: 12px;
+  padding: 12px;
+  height: calc(100vh - 57px);
+}
+
+.map-wrap, .list-wrap {
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  overflow: hidden;
+  background: rgba(18, 26, 43, 0.6);
+}
+
+#map { height: 100%; min-height: 420px; }
+
+.list-wrap { display: flex; flex-direction: column; }
+
+.list-header {
+  padding: 12px 12px 8px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  border-bottom: 1px solid var(--border);
+}
+.list-header h2 { margin: 0; font-size: 15px; }
+.list-header .conteggio { color: var(--muted); font-weight: 400; font-size: 13px; }
+
+.list { overflow: auto; padding: 10px; flex: 1; }
+
+/* ---------- card della lista ---------- */
+.card {
+  display: flex;
+  gap: 10px;
+  padding: 10px;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: rgba(0, 0, 0, 0.14);
+  margin-bottom: 10px;
+  cursor: pointer;
+}
+.card:hover { background: rgba(255, 255, 255, 0.05); }
+.card.nascosta { display: none; }
+
+/* Card raggiunta dalla mappa: clic sul segnalino → la lista scorre fin lì
+   e la card lampeggia (mobile: niente scorrimento a mano). */
+.card.evidenzia { animation: card-evidenzia 2.2s; }
+@keyframes card-evidenzia {
+  0% { border-color: rgba(255, 224, 138, 0.9); background: rgba(255, 224, 138, 0.16); }
+  60% { border-color: rgba(255, 224, 138, 0.55); background: rgba(255, 224, 138, 0.1); }
+  100% { border-color: var(--border); background: rgba(0, 0, 0, 0.14); }
+}
+
+.thumb {
+  width: 86px;
+  height: 62px;
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.06);
+  overflow: hidden;
+  flex: 0 0 auto;
+}
+.thumb img { width: 100%; height: 100%; object-fit: cover; display: block; }
+
+.card-main { flex: 1 1 auto; min-width: 0; }
+.card-title { font-weight: 800; font-size: 13px; margin: 0 0 4px; }
+.card-addr { color: var(--muted); font-size: 12px; margin: 0 0 6px; line-height: 1.3; }
+.card-when { font-size: 12px; margin: 0; line-height: 1.35; }
+
+.card-side { flex: 0 0 auto; display: flex; flex-direction: column; align-items: flex-end; gap: 8px; }
+.badge-review {
+  background: var(--giallo);
+  color: #4a3a06;
+  font-size: 10px;
+  font-weight: 800;
+  border-radius: 999px;
+  padding: 3px 8px;
+  white-space: nowrap;
+}
+
+/* ---------- popup ---------- */
+.popup-body { max-width: 260px; }
+.popup-titolo { font-weight: 900; font-size: 14px; margin: 0 0 4px; }
+.popup-addr { color: #555; font-size: 12px; margin: 0 0 6px; line-height: 1.35; }
+
+/* «Apri in Google Maps»: il popup ha sfondo chiaro, il link usa il blu Google */
+.popup-gmaps {
+  display: inline-block;
+  margin-top: 8px;
+  padding: 6px 10px;
+  border-radius: 8px;
+  border: 1px solid rgba(0, 0, 0, 0.15);
+  background: rgba(0, 0, 0, 0.05);
+  color: #1a73e8;
+  font-size: 12px;
+  font-weight: 800;
+  text-decoration: none;
+}
+.popup-gmaps:hover { background: rgba(0, 0, 0, 0.1); }
+
+/* «Scheda ufficiale OHN»: stesso stile del link Google Maps, con accento
+   diverso (rosso Open House) per distinguerlo a colpo d'occhio. */
+.popup-ohn {
+  display: inline-block;
+  margin: 8px 0 0 6px;
+  padding: 6px 10px;
+  border-radius: 8px;
+  border: 1px solid rgba(0, 0, 0, 0.15);
+  background: rgba(0, 0, 0, 0.05);
+  color: #c0392b;
+  font-size: 12px;
+  font-weight: 800;
+  text-decoration: none;
+}
+.popup-ohn:hover { background: rgba(0, 0, 0, 0.1); }
+
+/* ---------- pulsanti ---------- */
+.btn {
+  border: 1px solid transparent;
+  border-radius: 10px;
+  padding: 8px 12px;
+  font-weight: 800;
+  cursor: pointer;
+  font-size: 13px;
+}
+.btn-primary { background: var(--accent); color: #fff; }
+.btn-primary:hover { background: var(--accent2); }
+.btn-ghost {
+  background: rgba(255, 255, 255, 0.06);
+  border-color: var(--border);
+  color: var(--text);
+}
+.btn-ghost:hover { background: rgba(255, 255, 255, 0.12); }
+.btn-small { padding: 6px 10px; font-size: 12px; }
+
+.vai-btn {
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid var(--border);
+  color: var(--text);
+  padding: 6px 10px;
+  border-radius: 10px;
+  cursor: pointer;
+  font-weight: 800;
+  font-size: 12px;
+}
+.vai-btn:hover { background: rgba(255, 255, 255, 0.16); }
+
+/* ---------- pannello verifica ---------- */
+.verifica-panel {
+  position: fixed;
+  inset: 57px 0 0 0;
+  z-index: 1100;
+  background: rgba(11, 18, 32, 0.985);
+  overflow: auto;
+  padding: 14px 18px 40px;
+}
+.verifica-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+  position: sticky;
+  top: -14px;
+  margin: -14px -18px 10px;
+  padding: 14px 18px;
+  background: inherit;
+  border-bottom: 1px solid var(--border);
+}
+.verifica-head h2 { margin: 0; font-size: 17px; }
+.verifica-actions { display: flex; gap: 8px; flex-wrap: wrap; }
+.verifica-nota { color: var(--muted); font-size: 13px; line-height: 1.5; max-width: 900px; }
+
+.verifica-card {
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: rgba(0, 0, 0, 0.18);
+  padding: 12px;
+  margin-bottom: 12px;
+  max-width: 980px;
+}
+.verifica-card.sospetta { border-color: rgba(255, 224, 138, 0.55); }
+
+.vc-head { display: flex; gap: 10px; align-items: center; margin-bottom: 10px; flex-wrap: wrap; }
+.vc-head img {
+  width: 64px; height: 46px; object-fit: cover; border-radius: 8px; background: rgba(255,255,255,0.06);
+}
+.vc-titolo { font-weight: 800; font-size: 13px; flex: 1; }
+.vc-ok {
+  display: flex; align-items: center; gap: 6px;
+  font-size: 12.5px; color: var(--muted); cursor: pointer; user-select: none;
+}
+.vc-ok input { width: 16px; height: 16px; accent-color: var(--verde); }
+
+.vc-grid { display: grid; grid-template-columns: 92px 1fr; gap: 8px 10px; align-items: start; }
+.vc-grid label { font-size: 12px; color: var(--muted); padding-top: 9px; }
+.vc-grid textarea, .vc-grid .coord-riga {
+  width: 100%;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  color: var(--text);
+  padding: 8px 10px;
+  font: inherit;
+  font-size: 13px;
+  resize: vertical;
+}
+.vc-grid textarea.da-vedere { background: rgba(255, 224, 138, 0.14); border-color: rgba(255, 224, 138, 0.6); }
+.coord-riga { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+.coord-riga input {
+  width: 130px;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  color: var(--text);
+  padding: 8px 10px;
+  font: inherit;
+  font-size: 13px;
+}
+.coord-riga input.da-vedere { background: rgba(255, 224, 138, 0.14); border-color: rgba(255, 224, 138, 0.6); }
+.coord-note { color: var(--muted); font-size: 11.5px; flex: 1 1 200px; }
+
+.verifica-vuoto { color: var(--muted); font-size: 13px; }
+
+/* ---------- filtri per giornata e stato tour ---------- */
+.filtri-giornata {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  padding: 10px 12px 0;
+}
+
+.giorno-btn {
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid var(--border);
+  color: var(--muted);
+  padding: 6px 12px;
+  border-radius: 999px;
+  cursor: pointer;
+  font-weight: 700;
+  font-size: 12.5px;
+}
+.giorno-btn:hover { background: rgba(255, 255, 255, 0.12); color: var(--text); }
+.giorno-btn.attivo {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: #fff;
+}
+.giorno-btn.attivo:hover { background: var(--accent2); }
+
+.stato-tour {
+  color: var(--giallo);
+  font-size: 12px;
+  font-weight: 800;
+}
+.stato-conflitti {
+  color: var(--giallo);
+  font-size: 12px;
+  font-weight: 800;
+  background: rgba(255, 224, 138, 0.12);
+  border: 1px solid rgba(255, 224, 138, 0.4);
+  border-radius: 999px;
+  padding: 3px 10px;
+  white-space: nowrap;
+}
+
+/* Legenda dei marker arancio (vicini aperti solo nel giorno scelto):
+   appare accanto ai filtri solo quando ce n'è almeno uno sulla mappa. */
+.legenda-vicini {
+  color: #f0a35c;
+  font-size: 12px;
+  font-weight: 800;
+  background: rgba(240, 163, 92, 0.12);
+  border: 1px solid rgba(240, 163, 92, 0.45);
+  border-radius: 999px;
+  padding: 3px 10px;
+  white-space: nowrap;
+}
+
+.star-btn {
+  background: transparent;
+  border: none;
+  color: rgba(255, 255, 255, 0.28);
+  font-size: 21px;
+  line-height: 1;
+  cursor: pointer;
+  padding: 2px 4px;
+}
+.star-btn:hover { color: var(--giallo); }
+.star-btn.attiva { color: var(--giallo); text-shadow: 0 0 10px rgba(255, 224, 138, 0.45); }
+
+/* «✕»: rimuove il luogo dal tour di tutti i giorni (accanto alla stella) */
+.del-btn {
+  background: transparent;
+  border: none;
+  color: rgba(255, 255, 255, 0.28);
+  font-size: 15px;
+  font-weight: 800;
+  line-height: 1;
+  cursor: pointer;
+  padding: 2px 6px;
+}
+.del-btn:hover { color: var(--accent2); }
+
+.card-conflitto {
+  margin-top: 6px;
+  border: 1px solid rgba(255, 224, 138, 0.5);
+  background: rgba(255, 224, 138, 0.1);
+  color: var(--giallo-scuro);
+  border-radius: 8px;
+  padding: 6px 8px;
+  font-size: 11.5px;
+  line-height: 1.4;
+}
+.card-conflitto p { margin: 0 0 4px; }
+.card-conflitto p:last-child { margin-bottom: 0; }
+
+/* ---------- popup Leaflet ---------- */
+.leaflet-popup-content-wrapper { border-radius: 12px; }
+.leaflet-popup-content { margin: 12px 14px; }
+
+/* Segnalini custom (divIcon): goccia blu di serie, arancio per i luoghi
+   aperti solo nel giorno scelto e vicini a un luogo del tour. */
+.pin {
+  position: relative;
+}
+.pin span {
+  display: block;
+  width: 26px;
+  height: 26px;
+  border-radius: 50% 50% 50% 0;
+  transform: rotate(-45deg);
+  background: #3b82f6;
+  border: 2px solid rgba(255, 255, 255, 0.9);
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.4);
+}
+.pin-arancio span {
+  background: #f0803c;
+  animation: pulsa-arancio 1.6s ease-in-out infinite;
+}
+@keyframes pulsa-arancio {
+  0%, 100% { box-shadow: 0 2px 6px rgba(0, 0, 0, 0.4); }
+  50% { box-shadow: 0 0 0 8px rgba(240, 128, 60, 0.25), 0 2px 6px rgba(0, 0, 0, 0.4); }
+}
+.pin-blu span { background: #3b82f6; }
+
+/* Verdi: luoghi scelti con ★ nel tour della giornata selezionata */
+.pin-verde span {
+  background: #2f9e6e;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.4), 0 0 0 3px rgba(47, 158, 110, 0.25);
+}
+
+/* Nota nel popup per i marker arancio (il popup ha sfondo chiaro) */
+.leaflet-popup-content .popup-vicino {
+  color: #a05a1c;
+  font-weight: 800;
+}
+.popup-vicino {
+  margin-top: 6px;
+  border: 1px solid rgba(240, 128, 60, 0.55);
+  background: rgba(240, 128, 60, 0.1);
+  border-radius: 8px;
+  padding: 6px 8px;
+  font-size: 11.5px;
+  line-height: 1.4;
+}
+
+/* ---------- responsive ---------- */
+@media (max-width: 980px) {
+  .layout {
+    grid-template-columns: 1fr;
+    height: auto;
+  }
+  .map-wrap { order: 0; }
+  #map { height: 52vh; min-height: 300px; }
+  .list-wrap { order: 1; height: 60vh; }
+  .topbar { flex-wrap: wrap; }
+  #search { max-width: none; width: 100%; order: 3; }
+  .pass-admin { width: 92px; }
+  .verifica-panel { inset: 0; padding-top: 60px; }
+  .verifica-head { top: -60px; }
+}

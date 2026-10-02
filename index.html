@@ -1,0 +1,71 @@
+<!doctype html>
+<html lang="it">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>My Tour — Mappa · Open House Napoli 2026</title>
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <header class="topbar">
+    <div class="brand">
+      <h1>My Tour</h1>
+      <span class="brand-sub">Open House Napoli · 2–4 ottobre 2026</span>
+    </div>
+    <input id="search" type="search" placeholder="Cerca per titolo o indirizzo…" autocomplete="off" />
+    <nav class="topbar-actions">
+      <input id="adminPass" class="pass-admin" type="password" placeholder="🔒 Password" autocomplete="off"
+        title="Password per abilitare il tasto di cancellazione (✕)" />
+      <span id="contatore" class="contatore" hidden></span>
+    </nav>
+  </header>
+
+  <main class="layout">
+    <section class="map-wrap" aria-label="Mappa dei luoghi">
+      <div id="map"></div>
+    </section>
+
+    <aside class="list-wrap" aria-label="Elenco dei luoghi">
+      <div class="list-header">
+        <h2>Luoghi <span id="conteggio"></span></h2>
+        <button id="resetBtn" class="btn btn-ghost btn-small" type="button">Reset filtri</button>
+      </div>
+      <div class="filtri-giornata" role="group" aria-label="Filtro per giornata">
+        <button class="giorno-btn attivo" data-giorno="" type="button">Tutti</button>
+        <button class="giorno-btn" data-giorno="ven" type="button">Ven 2</button>
+        <button class="giorno-btn" data-giorno="sab" type="button">Sab 3</button>
+        <button class="giorno-btn" data-giorno="dom" type="button">Dom 4</button>
+        <span id="tourCount" class="stato-tour" hidden></span>
+        <span id="conflittiCount" class="stato-conflitti" hidden></span>
+        <span id="legendaVicini" class="legenda-vicini" hidden
+          title="Luoghi aperti solo questo giorno e vicini (≤ 500 m) a un luogo del tour">🟠 solo questo giorno, vicini al tour</span>
+        <button id="resetScelteBtn" class="btn btn-ghost btn-small" type="button" hidden
+          title="Svuota il tour personale (rimuove tutte le stelle)">↺ Reset stelle</button>
+      </div>
+      <div id="list" class="list"></div>
+    </aside>
+  </main>
+
+  <!-- Pannello di verifica OCR -->
+  <div id="verificaPanel" class="verifica-panel" hidden>
+    <div class="verifica-head">
+      <h2>🔍 Verifica OCR</h2>
+      <div class="verifica-actions">
+        <button id="exportBtn" class="btn btn-ghost" type="button">⬇ Esporta dati verificati (JSON)</button>
+        <button id="ripristinaBtn" class="btn btn-ghost" type="button">↺ Ripristina originali</button>
+        <button id="chiudiVerifica" class="btn btn-primary" type="button">✕ Chiudi</button>
+      </div>
+    </div>
+    <p class="verifica-nota">
+      Controlla i punti estratti dall'OCR dell'immagine. I campi gialli sono quelli con anomalie segnalate;
+      puoi correggere qualsiasi campo: le modifiche restano salvate in questo browser e vengono applicate
+      a mappa e lista. «Esporta» produce il JSON delle correzioni per fissarle nel file <code>data.js</code>.
+    </p>
+    <div id="verificaList" class="verifica-list"></div>
+  </div>
+
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <script type="module" src="app.js"></script>
+</body>
+</html>

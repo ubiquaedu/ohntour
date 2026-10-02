@@ -1,0 +1,252 @@
+# Memoria progetto — App web «My Tour» (D:\coding\ohn)
+
+> File di memoria per le chat AI: leggere PRIMA di intervenire. Le regole
+> generali valide per tutte le app sono in `D:\coding\agents.md` (rispondere
+> SEMPRE in italiano, mai pubblicare `.freebuff/`, ecc.). Avvio locale e
+> pubblicazione sono descritti nel `README.md`; qui c'è tutto il resto.
+
+## Cosa è
+
+- Mini app web **statica** «My Tour»: mappa OpenStreetMap (Leaflet 1.9.4 via
+  CDN) con i **30 luoghi** dell'itinerario «Fuori Porta» di Open House Napoli
+  2026 (2–4 ottobre), estratti via OCR dall'immagine `mytour.png` e **verificati
+  dall'utente in pagina (30/30 confermati)**.
+- Pubblicata su **https://ohn26.pages.dev** (Cloudflare Pages, Direct Upload).
+- Nessun backend, nessuna dipendenza npm: solo file statici. Nessun pulsante
+  ELIMINA (richiesta esplicita: la lista è di sola consultazione).
+- **Filtro per giornata** (Tutti · Ven 2 · Sab 3 · Dom 4): nasconde le card E i
+  marker degli altri giorni (scelta utente), combinabile con la ricerca; NON
+  persistito — all'avvio è sempre «Tutti», così i deep link `?vai=` funzionano.
+  Nelle viste di giornata le card sono ordinate per il PRIMO orario del giorno
+  presente nei dati (prima fascia di quel giorno; orari non interpretabili in
+  fondo); in «Tutti» l'ordine resta alfabetico (quello di `data.js`). Card e
+  popup nelle viste di giorno mostrano SOLO le fasce del giorno scelto
+  (`testoWhenDelGiorno`): i 12 luoghi aperti più giorni non fanno più vedere
+  la parte degli altri giorni (es. «Domenica…» sotto Sabato), che sembrava un
+  conflitto appartenere al giorno dopo — segnalazione dell'utente del 26/09.
+- **Tour personale PER GIORNATA** (26/09, richiesta esplicita: «se ho scelto
+  la stella il sabato vuol dire che lo visito di sabato»): il pulsante ★ si
+  vede e si usa SOLO con una giornata selezionata e vale per QUEL giorno —
+  passando a un altro giorno la stella (e i suoi conflitti) non appare, a
+  meno di metterla anche lì. Le scelte stanno in `localStorage` con la chiave
+  `mytour-scelte-per-giorno-v1` (`{ven:[], sab:[], dom:[]}`; la vecchia
+  chiave globale `mytour-scelte-v1` non è più letta) e sopravvivono alla
+  ricarica. Contatori: «★ sabato: N» col giorno attivo, «★ nel tour: N»
+  (somma) in «Tutti»; il pulsante «↺ Reset stelle» (con conferma) svuota
+  TUTTI i giorni. Le stelle appaiono/scompaiono al volo al cambio di giorno.
+  Nelle viste di giorno ogni card ha anche il pulsante «✕» accanto alla stella
+  (funziona ANCHE senza stella): rimuove il luogo dal tour di tutti i giorni in
+  una volta (con conferma), per non rivederlo — e i suoi conflitti — il giorno
+  dopo la visita (richiesta esplicita); senza stelle non fa nulla.
+- **✕ sotto password** (01/10, richiesta esplicita prima del deploy: «mettere
+  sotto password il tasto di cancellazione»): il pulsante «✕» delle card
+  appare SOLO dopo lo sblocco con il campo «🔒 Password» in alto a destra
+  nella barra (`.pass-admin`), password **«26»** (costante `PASSWORD_ADMIN`
+  in testa ad `app.js`) + Invio. Sbagliata → il campo trema (animazione CSS
+  `passa-errore`) e si cancella; giusta → diventa «🔓» con bordo verde e le
+  card mostrano «✕» nelle viste di giorno. Click sul campo sbloccato =
+  riblocca. NON persistita in localStorage: al refresh si torna bloccati;
+  l'amico che apre il sito vede solo il campo, senza ✕. `rimuoviDaTuttiIGiorni`
+  riverifica `adminSbloccato` per sicurezza.
+- **Avvisi di conflitto orario** tra i luoghi scelti con ★, SOLO a livello di
+  giornata (richiesta esplicita): con un giorno selezionato (Ven 2 · Sab 3 ·
+  Dom 4) l'avviso giallo su card e popup segnala le coppie che si sovrappongono
+  o si susseguono con meno di 30 minuti di margine (costante
+  `MARGINE_CONFLITTO_MIN` in testa ad `app.js`; 30 minuti esatti NON sono
+  conflitto), considerando SOLO le fasce di quel giorno; nella vista «Tutti»
+  non ci sono avvisi. Contatori «⚠ N in conflitto» e «★ nel tour: N» sopra la
+  lista; il meccanismo della stella è invariato (stesse scelte, stesso
+  localStorage, live-update di card e popup al cambio giorno e al toggle ★).
+- **«Apri in Google Maps» nel popup**: link a Google Maps Directions
+  (`/maps/dir/?api=1&destination=<lat>,<lon>` con le coordinate verificate del
+  punto), apre in nuova scheda (`target=_blank`, `rel=noopener`).
+- **Popup snellito** (01/10, richieste esplicite: «togli foto e orari» poi
+  «togli i conflitti dal popup»): il popup del marker mostra SOLO nome,
+  indirizzo, link Google Maps e la nota 🟠 se il luogo è un candidato
+  vicino; foto, orari e avvisi di conflitto restano sulla card della lista.
+  Regredire solo su nuova richiesta esplicita.
+- **Mappa → lista** (01/10, richiesta esplicita: «quando clicco il segnalino
+  la lista non si sposta», utile soprattutto su mobile): all'apertura del
+  popup di un marker la lista scorre fino alla card di quel luogo
+  (`evidenziaCardLista`, scrollIntoView `block:"nearest"`) e la card
+  lampeggia in giallo per ~2 s (`.card.evidenzia`). Click ripetuti: animazione
+  riavviata via reflow. Card nascosta dai filtri: nessun scroll, nessun
+  errore. Il flusso inverso resta «📍 Vai» (lista → mappa).
+- **Ottimizzazione (01/10)**: `datiCorrenti()` è memoizzato in `cacheDati`
+  (prima ricostruiva l'array di 30 luoghi a OGNI chiamata, e viene chiamata
+  centinaio di volte per interazione); `parseOrari` è memoizzato per testo
+  `when` in `cacheOrari` (prima ri-parseava con regex gli stessi testi);
+  `distanzaMetri` è memoizzato per coppia di id in `cacheDistanze`; i marker
+  cambiano icona SOLO se cambia lo stato (`marker.__statoPin`), così
+  `setIcon` non rimonta il DOM dei 30 pin a ogni aggiornamento. Le tre cache
+  si invalidano in `salvaCorrezioni()`, unico punto che cambia correzioni e
+  coordinate (pannello verifica, spostamento su mappa, ripristino).
+  Benchmark nel browser: ~9 ms per toggle ★, ~8 ms per cambio giornata.
+  CSS morto rimosso (`.popup-img`, `.popup-conflitto`).
+- **Import ufficiale da HTML preferiti (01/10)**: l'utente ha salvato la
+  pagina «My tour» di openhousenapoli.org come HTML (Downloads). Nuovo
+  script `_strumenti/importa_preferiti.py`: estrae i 30 luoghi (titolo,
+  indirizzo, orari, codice `l=<n>` della scheda), li confronta con data.js
+  per titolo normalizzato e con `--scrivi` aggiunge il campo `url` a ogni
+  voce (idempotente). RISULTATO: 30/30 abbinati; 2 errori OCR scoperti e
+  corretti in data.js — SAN GENNARO ALL'OLMO era 16:30–19:30, ufficiale
+  **10:30–13:30**; INTERNO 6 chiudeva 13:00, ufficiale **13:30** (i conflitti
+  mostrati cambiano di conseguenza). MEA DOMUS resta volutamente diversa
+  (prenotazione dom 11:00) e lo script la segnala ogni volta: normale.
+  Campo `url` nel popup: bottone «🏛 Scheda ufficiale OHN» (rosso, accanto a
+  Google Maps) che apre `location.php?l=<n>` con info di accesso e visita.
+  PROCEDURA per i prossimi import: salva la pagina preferiti come HTML →
+  `python _strumenti/importa_preferiti.py [percorso] [--scrivi]` → correggi
+  le differenze segnalate a mano in data.js.
+- **Conflitti estesi ai candidati arancio** (01/10, segnalazione utente:
+  «INTERNO 6 non era segnalato in conflitto»): `conflittiPerLuogo` confronta
+  ora gli orari di luoghi scelti con ★ E dei candidati arancio (aperti solo
+  quel giorno e vicini a un luogo scelto), a entrambi i sensi (l'avviso
+  appare sulla card/popup di entrambi). Storicamente i conflitti erano SOLO
+  tra stellati — prima nella vista «Tutti», poi limitati alla giornata — la
+  memoria dell'utente di «conflitti anche senza stella» riguardava il caso
+  «Tutti» vecchio.
+- **Marker arancio «vicini da visitare»** (01/10, richiesta esplicita: «se
+  scelgo un luogo voglio che cambi colore al segnalino di quelli vicini che
+  sono aperti solo quel giorno»): con una giornata selezionata e almeno una
+  stella nel tour, i marker dei luoghi NON scelti che sono aperti SOLO quel
+  giorno (tutte le fasce interpretabili su quel giorno; orari non
+  interpretabili o multi-giorno = mai arancio) e distano ≤ 500 m
+  (`RAGGIO_VICINI_M`) da un luogo scelto diventano arancioni e pulsano
+  (divIcon custom con TRE stati: `.pin-blu` normale, `.pin-verde` scelto con
+  ★ nella giornata selezionata, `.pin-arancio` con animazione CSS; i default
+  di Leaflet non supportano la ricolorazione). Legenda «🟠 solo questo
+  giorno, vicini al tour» accanto ai filtri, visibile solo se ce n'è almeno
+  uno; nota 🟠 nel popup del luogo evidenziato. Ricolorazione in
+  `aggiornaColoriMarker()`, chiamata da `applicaFiltroMarker()` (quindi anche
+  al cambio giorno e al reset filtri), al toggle ★, a ✕ e al reset stelle.
+  Funzione distanza: haversine in `distanzaMetri()`.
+  NOTA (01/10, segnalazione utente): con ATELIER AMBRA stellato il pin
+  arancio sembra «l'atelier» ma è INTERNO 6 / CARLA CELESTINO, nello STESSO
+  palazzo (0 m, pin sovrapposti); i luoghi già scelti restano blu (ora verdi)
+  perché l'arancio segnala solo i NON scelti. Il verde risolve l'ambiguità.
+- **Vista pubblica «pulita»** (vedi anche «✕ sotto password» sopra): il
+  contatore «✓ verificato» in barra è visibile
+  SOLO nella vista riservata `?verifica=1` (nella vista pubblica lo span resta
+  nel DOM ma con `hidden`, così non occupa spazio). Deciso dalla costante
+  `accessoVerifica` in testa ad `app.js`.
+
+## Fonte dati e OCR (come sono stati ricavati i dati)
+
+- `mytour.png` (1920×5618) = screenshot della lista web dei luoghi con
+  miniature, titoli, indirizzi, orari e pulsanti ELIMINA.
+- L'OCR è stato fatto «a vista» dall'agente: ritagli sovrapposti della PNG
+  salvati in JPG nel TEMP e letti come immagini. Le prime stime (15 punti)
+  erano SBAGLIATE: il conteggio automatico delle fasce di pixel non-bianchi
+  nella colonna della miniatura (x=200–480) ha rivelato **30 miniature** (passo
+  ~185 px). Le fasce rilevate sono registrate negli appunti di chat, non nei file.
+- Ordine della lista: alfabetico. Campi per punto: title, address, when,
+  lat/lon, image (miniature ritagliate in `assets/`, 200px di larghezza).
+- **MEA DOMUS MERGELLINA**: il campo `when` dell'OCR (tante fasce, con
+  «18:00 > 18:45» duplicato) è stato RIDOTTO su richiesta dell'utente alla
+  sola prenotazione confermata: «Domenica 4 ottobre 11:00 > 11:45» (con
+  commento in `data.js`). Il parser degli orari di `app.js` resta comunque
+  in grado di leggere fasce multiple con giorno ereditato e deduplica.
+
+## Coordinate (pre-calcolate, la mappa NON geocodifica al volo)
+
+- Script: `_strumenti/geocode.py` (Nominatim, UA personalizzato, 1,1 s tra le
+  richieste, countrycodes=it, varianti di ripiego); esiti in
+  `_strumenti/risultati.json`.
+- 29/30 risolti. Casi particolari:
+  - **MEA DOMUS MERGELLINA** (via Giordano Bruno 95): il primo match Nominatim
+    era una via omonima a Casoria (40.90…): corretto a Mergellina
+    (40.83073, 14.22169) imponendo «80122 Napoli» / «Mergellina».
+  - **EDUCANDATO STATALE** («Largo dei Miracoli, 37»): non esiste su OSM;
+    coordinate della chiesa di Santa Maria dei Miracoli (il monastero
+    dell'Educandato, Sanità) prese dalla pagina ufficiale Open House Napoli
+    (openhousenapoli.org/location/location.php?l=309).
+- **Segnalatore del porto (punto 16, «I (NON) LUOGHI DEL PORTO»)»: posizionato
+  a mano su richiesta dell'utente a FINE VIA ALCIDE DE GASPERI, incrocio con
+  Piazza Municipio (40.84100, 14.25415) — estremo della via ricavato dalla
+  geometria OSM via Overpass. Nota ambiente: overpass.kumi.systems va in
+  timeout da questa macchina e overpass-api.de ha il CERTIFICATO SSL SCADUTO
+  (serve context con verify_mode=CERT_NONE per query in sola lettura).
+
+## Verifica OCR (chiusa)
+
+- Pannello «🔍 Verifica OCR» integrato nella pagina: campi editabili, campi
+  sospetti gialli (`needsReview`), casella «confermo», export JSON
+  (scarica `luoghi-verificati.json` in Downloads), «Ripristina originali».
+- Le correzioni fatte in pagina restano nel BROWSER (`localStorage`, chiave
+  `mytour-mappa-correzioni-v1`) e si applicano a mappa/lista/popup.
+- Esito: l'export dell'utente è stato confrontato con `data.js` tramite
+  `_strumenti/confronta_export.py` → **zero differenze, 30/30 confermati**.
+  I flag `needsReview` sono stati quindi RIMOSSI da `data.js`.
+
+## Accessi speciali (link)
+
+- `?vai=<id>` → deep link: centra il punto e apre il popup
+  (es. `?vai=16-i-non-luoghi-porto`).
+- `?verifica=1` → ricrea il pulsante «🔍 Verifica OCR» in alto e apre il
+  pannello. IL PULSANTE NON È NELL'INTERFACCIA PUBBLICA (richiesta esplicita:
+  il sito viene condiviso con un amico); è una riservatezza leggera.
+- Combinabili: `?verifica=1&vai=<id>`.
+- Il contatore «✓ verificato» in barra è visibile SOLO con `?verifica=1`
+  (nascosto nella vista pubblica, richiesta esplicita: il sito viene condiviso
+  con un amico).
+
+## Struttura (i file dell'app sono nella RADICE di ohn)
+
+- STORIA: l'app nasceva in `mytour-mappa/`; l'utente stava (per errore)
+  caricando `ohn` su Cloudflare, quindi i file sono stati SPOSTATI nella
+  radice di `D:\coding\ohn` e la cartella eliminata. I link interni sono
+  relativi e non hanno richiesto modifiche.
+- `index.html`, `style.css`, `app.js`, `data.js`, `assets/` (30 jpg) = sito.
+- `mytour.png` = sorgente OCR (non richiesta dal sito, può essere omessa dal deploy).
+- `_strumenti/` = geocode.py, confronta_export.py, risultati.json (build, non pubblicabili ma innocue).
+- `README.md` = avvio locale, funzioni, deploy Cloudflare, esito verifica.
+
+## Deploy Cloudflare Pages (progetto ohn26)
+
+- Metodo: Direct Upload (drag & drop della cartella) su dash.cloudflare.com →
+  Workers & Pages → progetto **ohn26** → https://ohn26.pages.dev.
+- REGOLA CRITICA: ogni deployment SOSTITUISCE TUTTI i file (non incrementale).
+  Un deployment con file parziali (solo index.html) NON diventa attivo: resta
+  quello precedente. Caricare SEMPRE tutti e 4 i file + `assets/`.
+- Dopo il deploy: Ctrl+F5 (cache browser).
+- L'utente ha visto che si può collegare un repository GitHub per il deploy
+  automatico (push = deploy): possibile futuro, NON ancora fatto.
+
+## Repository git
+
+- `D:\coding\ohn` NON è un repository git (decisione: «per ora niente repo»).
+  Se in futuro si crea: `.gitignore` deve escludere `.freebuff/`; valutare se
+  includere `mytour.png` (3 MB) e `_strumenti/`.
+
+## Ambiente locale
+
+- `python -m http.server 8123` DA `D:\coding\ohn` (i moduli ES non girano in
+  `file://`). Attenzione: il comando deve avere cwd=ohn — una volta partito
+  dalla directory sbagliata serviva 404 su app.js.
+- Le coordinate dei 30 punti sono in `data.js`: per cambiare un indirizzo
+  serve anche aggiornare lat/lon (a mano o rilanciando il geocode).
+
+## Idee discusse ma NON implementate (proposte all'utente)
+
+- Template riutilizzabile per future «mappe per indirizzi»: `geocode.py` che
+  legge un CSV di indirizzi invece della lista hardcoded + `data.js` esempio.
+  Il codice dell'app (mappa, lista, ricerca, popup, strati, deep link,
+  verifica) è già generico: dipende solo da `data.js`.
+- Versione stampabile della lista raggruppata per giornata.
+
+Implementate nel frattempo (26/09/2026, da verificare poi in rete dopo il
+deploy): «Apri in Google Maps» nel popup; contatore «✓ verificato» visibile
+solo con `?verifica=1`; avvisi di conflitto limitati alla giornata selezionata
+(niente avvisi nella vista «Tutti»); stelle visibili solo nelle viste di
+giornata; pulsante «↺ Reset stelle» (conferma inclusa) per svuotare il tour;
+lista ordinata per primo orario del giorno; nelle viste di giorno card e
+popup mostrano solo le fasce del giorno scelto (niente orari degli altri giorni);
+stelle per giorno e conflitti solo tra i luoghi scelti del giorno attivo.
+
+## Storia delle chat
+
+- Parte del lavoro è stata fatta in un thread aperto PER ERRORE sul progetto
+  imgclassify (stesso contenuto, altra cartella). Questo file è la memoria
+  ufficiale del progetto per le chat successive: collegalo insieme a
+  `D:\coding\ohn` e a `D:\coding\agents.md`.

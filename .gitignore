@@ -1,0 +1,8 @@
+# File di lavoro dell'agente (non parte del sito né del repo)
+.freebuff/
+
+# Sorgente OCR: heavy, non serve al sito (dati già verificati in data.js)
+mytour.png
+
+# Salvataggi HTML importati (la copia fresca sta nei Download dell'utente)
+_strumenti/*.html

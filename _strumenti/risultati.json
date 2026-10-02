@@ -1,0 +1,296 @@
+{
+  "01": {
+    "query": "Piazza Museo Filangieri 255, Napoli",
+    "risultato": {
+      "lat": 40.8489197,
+      "lon": 14.2610162,
+      "display_name": "Piazza del Museo Filangieri, Pendino, Municipalità 2, Napoli, Campania, Italia",
+      "type": "square",
+      "importance": 0.06674760280766003
+    }
+  },
+  "02": {
+    "query": "Piazzetta Giacinto Gigante 38, Napoli",
+    "risultato": {
+      "lat": 40.8531725,
+      "lon": 14.2310534,
+      "display_name": "Piazzetta Domenico Scarlatti, Arenella, Municipalità 5, Napoli, Campania, Italia",
+      "type": "square",
+      "importance": 0.06674760280766003
+    }
+  },
+  "03": {
+    "query": "Via Gaetano Filangieri 48, Napoli",
+    "risultato": {
+      "lat": 40.8358579,
+      "lon": 14.2413036,
+      "display_name": "Via Gaetano Filangieri, Pizzofalcone, San Ferdinando, Municipalità 1, Napoli, Campania, 80121, Italia",
+      "type": "residential",
+      "importance": 0.05341426947432666
+    }
+  },
+  "04": {
+    "query": "Via Toledo 402, Napoli",
+    "risultato": {
+      "lat": 40.846878,
+      "lon": 14.2485541,
+      "display_name": "Università Federico II - Complesso dello Spirito Santo (DiARC), 402, Via Toledo, Rione Carità, San Giuseppe, Municipalità 2, Napoli, Campania, 80134, Italia",
+      "type": "university",
+      "importance": 8.093614099331682e-05
+    }
+  },
+  "05": {
+    "query": "Piazza Duca degli Abruzzi, Napoli",
+    "risultato": {
+      "lat": 40.8457034,
+      "lon": 14.2765944,
+      "display_name": "Piazza Duca degli Abruzzi, Mercato, Municipalità 2, Napoli, Campania, 80142, Italia",
+      "type": "square",
+      "importance": 0.06671257419699397
+    }
+  },
+  "06": {
+    "query": "Via Domenico Cimarosa 65, Napoli",
+    "risultato": {
+      "lat": 40.8425296,
+      "lon": 14.2312782,
+      "display_name": "65, Via Domenico Cimarosa, Vomero, Municipalità 5, Napoli, Campania, 80127, Italia",
+      "type": "house",
+      "importance": 8.093614099331682e-05
+    }
+  },
+  "07": {
+    "query": "Via Francesco Petrarca 38, Napoli",
+    "risultato": {
+      "lat": 40.8154245,
+      "lon": 14.2073394,
+      "display_name": "Via Francesco Petrarca, Villanova di Posillipo, Posillipo, Municipalità 1, Coroglio, Napoli, Campania, 80123, Italia",
+      "type": "tertiary",
+      "importance": 0.05341426947432666
+    }
+  },
+  "08": {
+    "query": "Via Sant'Antonio a Capodimonte 10, Napoli",
+    "risultato": {
+      "lat": 40.8657139,
+      "lon": 14.2528914,
+      "display_name": "Via Sant'Antonio a Capodimonte, Capodimonte, Stella, Municipalità 3, Napoli, Campania, 80137, Italia",
+      "type": "residential",
+      "importance": 0.05341426947432666
+    }
+  },
+  "09": {
+    "query": "Via Ferri Vecchi 18, Napoli",
+    "risultato": {
+      "lat": 40.8487052,
+      "lon": 14.2601432,
+      "display_name": "Via Ferri Vecchi, Pendino, Municipalità 2, Napoli, Campania, 80187, Italia",
+      "type": "service",
+      "importance": 0.04008093614099335
+    }
+  },
+  "10": {
+    "query": "Via Santa Teresa degli Scalzi 76, Napoli",
+    "risultato": {
+      "lat": 40.8560993,
+      "lon": 14.2483904,
+      "display_name": "Via Santa Teresa degli Scalzi, Rione Sanità, Stella, Municipalità 3, Napoli, Campania, 80136, Italia",
+      "type": "primary",
+      "importance": 0.05341426947432666
+    }
+  },
+  "11": {
+    "query": "Via San Gregorio Armeno 35, Napoli",
+    "risultato": {
+      "lat": 40.8504065,
+      "lon": 14.2576161,
+      "display_name": "Via San Gregorio Armeno, Rione Forcella, San Lorenzo, Municipalità 4, Napoli, Campania, 80138, Italia",
+      "type": "pedestrian",
+      "importance": 0.05341426947432666
+    }
+  },
+  "12": {
+    "query": "Piazza Santa Maria la Nova 43, Napoli",
+    "risultato": {
+      "lat": 40.8440684,
+      "lon": 14.2528391,
+      "display_name": "Piazza Santa Maria la Nova, Rione Carità, Porto, Municipalità 2, Napoli, Campania, Italia",
+      "type": "square",
+      "importance": 0.06674760280766003
+    }
+  },
+  "13": {
+    "query": "Via Sant'Anna dei Lombardi 16, Napoli",
+    "risultato": {
+      "lat": 40.8464052,
+      "lon": 14.2502346,
+      "display_name": "Via Sant'Anna dei Lombardi, Rione Carità, San Giuseppe, Municipalità 2, Napoli, Campania, 80134, Italia",
+      "type": "secondary",
+      "importance": 0.05341426947432666
+    }
+  },
+  "14": {
+    "query": "Largo dei Miracoli, Napoli",
+    "risultato": null
+  },
+  "15": {
+    "query": "Calata Trinita Maggiore 53, Napoli",
+    "risultato": {
+      "lat": 40.8465887,
+      "lon": 14.251282,
+      "display_name": "Film Commission Regione Campania S.C.a r.l. Onlus, 53, Calata Trinità Maggiore, Rione Carità, San Giuseppe, Municipalità 2, Napoli, Campania, 80100, Italia",
+      "type": "foundation",
+      "importance": 8.093614099331682e-05
+    }
+  },
+  "16": {
+    "query": "Via Depretis 1, Napoli",
+    "risultato": {
+      "lat": 40.8430945,
+      "lon": 14.2554435,
+      "display_name": "Monzú Gran Caffè, 1-3, Via Agostino Depretis, Rione Carità, Porto, Municipalità 2, Napoli, Campania, 80133, Italia",
+      "type": "cafe",
+      "importance": 8.093614099331682e-05
+    }
+  },
+  "17": {
+    "query": "Via Petrarca 141, Napoli",
+    "risultato": {
+      "lat": 40.8072871,
+      "lon": 14.1948879,
+      "display_name": "Via Francesco Petrarca, Posillipo, Municipalità 1, Coroglio, Napoli, Campania, 80123, Italia",
+      "type": "tertiary",
+      "importance": 0.05341426947432666
+    }
+  },
+  "18": {
+    "query": "Via Gaetano Filangieri 72, Napoli",
+    "risultato": {
+      "lat": 40.8358579,
+      "lon": 14.2413036,
+      "display_name": "Via Gaetano Filangieri, Pizzofalcone, San Ferdinando, Municipalità 1, Napoli, Campania, 80121, Italia",
+      "type": "residential",
+      "importance": 0.05341426947432666
+    }
+  },
+  "19": {
+    "query": "Corso Vittorio Emanuele 581, Napoli",
+    "risultato": {
+      "lat": 40.8401479,
+      "lon": 14.2438695,
+      "display_name": "Istituto Pontano, 581, Corso Vittorio Emanuele, Quartieri Spagnoli, Montecalvario, Municipalità 2, Napoli, Campania, 80135, Italia",
+      "type": "school",
+      "importance": 8.093614099331682e-05
+    }
+  },
+  "20": {
+    "query": "Via Alcide de Gasperi 65, Napoli",
+    "risultato": {
+      "lat": 40.8417383,
+      "lon": 14.2555387,
+      "display_name": "Via Alcide De Gasperi, Rione Carità, Porto, Municipalità 2, Napoli, Campania, 80133, Italia",
+      "type": "primary",
+      "importance": 0.05341426947432666
+    }
+  },
+  "21": {
+    "query": "Piazza Vanvitelli, Napoli",
+    "risultato": {
+      "lat": 40.8437821,
+      "lon": 14.2316017,
+      "display_name": "Piazza Luigi Vanvitelli, Rione Antignano, Vomero, Municipalità 5, Napoli, Campania, 80129, Italia",
+      "type": "tertiary",
+      "importance": 0.19619210675062
+    }
+  },
+  "22": {
+    "query": "Via San Sebastiano 51, Napoli",
+    "risultato": {
+      "lat": 40.848367,
+      "lon": 14.2520857,
+      "display_name": "Liceo Classico Vittorio Emanuele II, 51, Via San Sebastiano, San Giuseppe, Municipalità 2, Napoli, Campania, 80134, Italia",
+      "type": "school",
+      "importance": 0.1773516541617975
+    }
+  },
+  "23": {
+    "query": "Via Giordano Bruno 95, Napoli",
+    "risultato": {
+      "lat": 40.9022762,
+      "lon": 14.2845855,
+      "display_name": "Via Giordano Bruno, Dietro Via Vecchia, Casoria, Napoli, Campania, 80026, Italia",
+      "type": "residential",
+      "importance": 0.05339186770428012
+    }
+  },
+  "24": {
+    "query": "Via Santa Maria Antesaecula 129, Napoli",
+    "risultato": {
+      "lat": 40.8595985,
+      "lon": 14.2518867,
+      "display_name": "Via Santa Maria Antesaecula, Rione Sanità, Stella, Municipalità 3, Napoli, Campania, 80137, Italia",
+      "type": "residential",
+      "importance": 0.05341426947432666
+    }
+  },
+  "25": {
+    "query": "Via San Paolo 51, Napoli",
+    "risultato": {
+      "lat": 40.851593,
+      "lon": 14.256053,
+      "display_name": "Via San Paolo, San Lorenzo, Municipalità 4, Napoli, Campania, 80130, Italia",
+      "type": "pedestrian",
+      "importance": 0.05341426947432666
+    }
+  },
+  "26": {
+    "query": "Via Teresa Ravaschieri 9, Napoli",
+    "risultato": {
+      "lat": 40.834605,
+      "lon": 14.2282788,
+      "display_name": "Via Teresa Filangieri Fieschi Ravaschieri, Chiaia, Municipalità 1, Napoli, Campania, 80122, Italia",
+      "type": "residential",
+      "importance": 0.05338391775387194
+    }
+  },
+  "27": {
+    "query": "Via della Sanita 2, Napoli",
+    "risultato": {
+      "lat": 40.8574672,
+      "lon": 14.2523911,
+      "display_name": "Via Arena della Sanità, Rione Sanità, Stella, Municipalità 3, Napoli, Campania, 80137, Italia",
+      "type": "residential",
+      "importance": 0.05341426947432666
+    }
+  },
+  "28": {
+    "query": "Piazza Trieste e Trento, Napoli",
+    "risultato": {
+      "lat": 40.837323,
+      "lon": 14.2484454,
+      "display_name": "Piazza Trieste e Trento, San Ferdinando, Municipalità 1, Napoli, Campania, 80132, Italia",
+      "type": "residential",
+      "importance": 0.3733250944850813
+    }
+  },
+  "29": {
+    "query": "Via San Paolo 4, Napoli",
+    "risultato": {
+      "lat": 40.851593,
+      "lon": 14.256053,
+      "display_name": "Via San Paolo, San Lorenzo, Municipalità 4, Napoli, Campania, 80130, Italia",
+      "type": "pedestrian",
+      "importance": 0.05341426947432666
+    }
+  },
+  "30": {
+    "query": "Via Guglielmo Melisurgo 4, Napoli",
+    "risultato": {
+      "lat": 40.84006,
+      "lon": 14.2552455,
+      "display_name": "Melisurgo Property, 4, Via Guglielmo Melisurgo, Rione Carità, Porto, Municipalità 2, Napoli, Campania, 80133, Italia",
+      "type": "apartment",
+      "importance": 8.093614099331682e-05
+    }
+  }
+}
