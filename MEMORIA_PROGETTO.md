@@ -16,6 +16,24 @@
   Aggiornati titolo pagina, header, README e commenti. Restano INVARIATI le
   chiavi `localStorage` `mytour-*`, il file `mytour.png` e la pagina «My
   tour» di openhousenapoli.org (nomi funzionali/esterni).
+- **Generalizzazione per il riuso (03/10, richiesta esplicita)**: l'app è
+  pubblica su GitHub e va riusata nelle prossime edizioni: tolti i riferimenti
+  DESCRITTIVI a quest'anno e al numero dei luoghi (brand-sub in index.html,
+  intro e testi del README, commenti; la regex del prefisso del giorno in
+  `testoWhenDelGiorno` non fissa più «ottobre»). Restano INTATTI i dati
+  funzionali dell'edizione corrente (date e orari nei `when` di data.js), i
+  pulsanti «Ven 2 · Sab 3 · Dom 4» (funzionali: per la nuova edizione cambia
+  solo l'etichetta) e gli URL (ohn26.pages.dev, progetto ohn26). README con
+  nuova sezione «Nuova edizione».
+- **Bug conflitti duplicati (03/10, segnalazione utente)**:
+  `conflittiPerLuogo` aggiungeva un avviso PER OGNI COPPIA di fasce
+  sovrapposte: con due luoghi da due fasce nello stesso giorno (es. ODEON e
+  TEATRO ANTICO, 10–13 | 15–18) la STESSA località compariva più volte nella
+  card. Ora una Map raggruppa per `idAltro` (fasce accumulate in
+  `fasceA`/`fasceB`) e `testoConflitto` deduplica gli intervalli e declina al
+  plurale («10:00–13:00 e 15:00–18:00 vanno in conflitto con…»). Verificato
+  nel browser: un avviso per località, contatore «⚠ N in conflitto» invariato
+  (conta i luoghi).
 - Pubblicata su **https://ohn26.pages.dev** (Cloudflare Pages, Direct Upload).
 - Nessun backend, nessuna dipendenza npm: solo file statici. Nessun pulsante
   ELIMINA (richiesta esplicita: la lista è di sola consultazione).
@@ -93,10 +111,11 @@
   script `_strumenti/importa_preferiti.py`: estrae i 30 luoghi (titolo,
   indirizzo, orari, codice `l=<n>` della scheda), li confronta con data.js
   per titolo normalizzato e con `--scrivi` aggiunge il campo `url` a ogni
-  voce (idempotente). RISULTATO: 30/30 abbinati; 2 errori OCR scoperti e
-  corretti in data.js — SAN GENNARO ALL'OLMO era 16:30–19:30, ufficiale
-  **10:30–13:30**; INTERNO 6 chiudeva 13:00, ufficiale **13:30** (i conflitti
-  mostrati cambiano di conseguenza). MEA DOMUS resta volutamente diversa
+  voce (idempotente). RISULTATO: 30/30 abbinati. PRECISAZIONE (03/10,
+  richiesta dell'utente): i due cambi di orario NON erano errori OCR ma
+  ORARI CAMBIATI DAGLI ORGANIZZATORI — SAN GENNARO ALL'OLMO era 16:30–19:30,
+  ufficiale **10:30–13:30**; INTERNO 6 chiudeva 13:00, ufficiale **13:30**
+  (i conflitti mostrati cambiano di conseguenza). MEA DOMUS resta volutamente diversa
   (prenotazione dom 11:00) e lo script la segnala ogni volta: normale.
   Campo `url` nel popup: bottone «🏛 Scheda ufficiale OHN» (rosso, accanto a
   Google Maps) che apre `location.php?l=<n>` con info di accesso e visita.

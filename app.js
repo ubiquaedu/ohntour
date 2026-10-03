@@ -32,8 +32,8 @@ const ETICHETTE_CAMPI = {
   address: "Indirizzo",
   when: "Quando",
 };
-// Giornate di Open House Napoli 2026: nomi per il riconoscimento nel campo
-// «when» e chiavi dei pulsanti di filtro.
+// Giornate dell'evento: nomi per il riconoscimento nel campo «when» e chiavi
+// dei pulsanti di filtro.
 const GIORNO_PER_NOME = { "venerdì": "ven", "sabato": "sab", "domenica": "dom" };
 // inverso: chiave del filtro («sab») → parola usata dal parser («sabato»)
 const NOME_PER_GIORNO = Object.fromEntries(
@@ -131,9 +131,9 @@ function campo(luogo, chiave) {
 
 // ---------- orari: parse del campo «when» ----------
 // Il campo contiene una o più fasce separate da «|»; ogni fascia può iniziare
-// con il giorno («Sabato 3 ottobre …») oppure ereditare quello precedente
-// («Sabato 3 ottobre 10:00 > 13:00 | 16:30 > 19:00»). Se un testo non si
-// interpreta il luogo resta comunque visibile: il parse non genera mai errori.
+// con il giorno («Sabato …») oppure ereditare quello precedente
+// («Sabato 10:00 > 13:00 | 16:30 > 19:00»). Se un testo non si interpreta il
+// luogo resta comunque visibile: il parse non genera mai errori.
 function parseOrari(testoWhen) {
   const chiave = testoWhen ?? "";
   if (cacheOrari.has(chiave)) return cacheOrari.get(chiave);
@@ -189,19 +189,32 @@ function conflittiPerLuogo(id, lista) {
   const giorno = NOME_PER_GIORNO[giornoFiltro];
   const mie = parseOrari(campo(luogo, "when")).filter((f) => f.giorno === giorno);
   if (mie.length === 0) return [];
-  const out = [];
+  // UN avviso per luogo in conflitto: se due luoghi hanno più fasce che si
+  // sovrappongono (es. mattina e pomeriggio), senza raggruppamento la STESSA
+  // località comparirebbe più volte nell'avviso della card (bug segnalato
+  // dall'utente). Le fasce in conflitto si accumulano in fasceA/fasceB.
+  const gruppi = new Map();
   for (const altro of lista) {
     if (altro.id === id || !rilevanti.has(altro.id)) continue;
     const fasceAltro = parseOrari(campo(altro, "when")).filter((f) => f.giorno === giorno);
     for (const a of mie) {
       for (const b of fasceAltro) {
-        if (slotInConflitto(a, b)) {
-          out.push({ idAltro: altro.id, titolo: campo(altro, "title"), fasciaA: a, fasciaB: b });
+        if (!slotInConflitto(a, b)) continue;
+        if (!gruppi.has(altro.id)) {
+          gruppi.set(altro.id, {
+            idAltro: altro.id,
+            titolo: campo(altro, "title"),
+            fasceA: [],
+            fasceB: [],
+          });
         }
+        const gruppo = gruppi.get(altro.id);
+        gruppo.fasceA.push(a);
+        gruppo.fasceB.push(b);
       }
     }
   }
-  return out;
+  return [...gruppi.values()];
 }
 
 function formattaOra(minuti) {
@@ -212,9 +225,13 @@ function formattaOra(minuti) {
 // senza il prefisso del giorno (serviva solo quando i conflitti si vedevano
 // anche nella vista «Tutti»).
 function testoConflitto(c) {
-  const a = `${formattaOra(c.fasciaA.inizio)}–${formattaOra(c.fasciaA.fine)}`;
-  const b = `${formattaOra(c.fasciaB.inizio)}–${formattaOra(c.fasciaB.fine)}`;
-  return `${a} va in conflitto con «${c.titolo}» (${b})`;
+  const ora = (f) => `${formattaOra(f.inizio)}–${formattaOra(f.fine)}`;
+  // orari deduplicati: più fasce dell'altro luogo che si sovrappongono alla
+  // stessa fascia ripetevano lo stesso intervallo nel messaggio
+  const a = [...new Set(c.fasceA.map(ora))];
+  const b = [...new Set(c.fasceB.map(ora))];
+  const verbo = a.length > 1 ? "vanno in conflitto" : "va in conflitto";
+  return `${a.join(" e ")} ${verbo} con «${c.titolo}» (${b.join(", ")})`;
 }
 
 // ---------- mappa ----------
@@ -396,7 +413,8 @@ function testoWhenDelGiorno(testoWhen, filtro) {
   }
   if (mantenuti.length === 0) return testoWhen; // orari non interpretabili: resta il testo intero
   // il primo blocco del giorno porta il nome del giorno: lo riusa come prefisso
-  const mPrima = mantenuti[0].match(/^(venerd[iì]\s+\d+\s+ottobre|sabato\s+\d+\s+ottobre|domenica\s+\d+\s+ottobre)/i);
+  // il mese non è fissato («ottobre»): la maschera vale per ogni edizione
+  const mPrima = mantenuti[0].match(/^((?:venerd[iì]|sabato|domenica)\s+\d+\s+\S+)/i);
   if (!mPrima) return mantenuti.join(" | ");
   const resto = mantenuti[0].slice(mPrima[0].length).trim();
   return [`${mPrima[1]} ${resto}`.trim(), ...mantenuti.slice(1)].join(" | ");

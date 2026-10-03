@@ -1,8 +1,10 @@
 # My OHN Tour — Mappa personalizzata per Open House Napoli
 
-Mini app web statica: **mappa OpenStreetMap** (Leaflet) con i 30 luoghi dell'itinerario
-«My OHN Tour» (2–4 ottobre 2026), estratti via OCR da `mytour.png` e **verificati
-dall'utente in pagina** (pannello Verifica OCR, 30/30 confermati).
+Mini app web statica: **mappa OpenStreetMap** (Leaflet) con i luoghi
+ dell'itinerario «My OHN Tour», estratti via OCR da `mytour.png` e **verificati
+ in pagina** (pannello Verifica OCR, tutti i punti confermati). L'app non
+ contiene riferimenti all'edizione: luoghi, date, orari e numero delle
+ destinazioni cambiano a ogni edizione e vivono solo in `data.js`.
 
 ## Contenuti
 
@@ -14,11 +16,11 @@ ohn/
 ├── index.html          # pagina: ricerca + mappa + lista + pannello verifica
 ├── style.css           # stile (dark, responsive fino a smartphone)
 ├── app.js              # logica: mappa, lista, popup, filtro giornata, tour, verifica OCR
-├── data.js             # i 30 luoghi: titolo, indirizzo, orari, coordinate
+├── data.js             # i luoghi: titolo, indirizzo, orari, coordinate
 ├── assets/             # miniature ritagliate da mytour.png
 ├── mytour.png          # immagine sorgente dell'OCR (non richiesta dal sito)
 └── _strumenti/         # utility di build (non pubblicate, innocue se caricate)
-    ├── geocode.py      # geocodifica Nominatim dei 30 indirizzi
+    ├── geocode.py      # geocodifica Nominatim degli indirizzi
     └── risultati.json  # esiti del geocoding
 ```
 
@@ -39,21 +41,21 @@ poi apri http://localhost:8123/ — oppure con l'estensione Live Server di VS Co
 - **Mappa con due strati base**: OpenStreetMap e **satellite** (Esri World
   Imagery), selezionabili dal riquadro in alto a destra — utile in fase di
   verifica per posizionare a mano i segnalatori.
-- 30 puntatori con coordinate pre-calcolate con Nominatim in fase di build
+- Puntatori con coordinate pre-calcolate con Nominatim in fase di build
   (nessun geocoding al volo quando usi l'app); il segnalatore di «I (NON)
   LUOGHI DEL PORTO» è a fine via De Gasperi, all'incrocio con Piazza Municipio.
 - **Lista affiancata** con ricerca (titolo/indirizzo/orari) e pulsante «📍 Vai»
   che centra il punto e apre il popup con miniatura, indirizzo e orari completi.
-- **Filtro per giornata**: pulsanti «Tutti · Ven 2 · Sab 3 · Dom 4» sopra la
-  lista; nascondono le card e i marker degli altri giorni e si combinano con
-  la ricerca. «Reset filtri» azzera ricerca e giornata. Con una giornata
+- **Filtro per giornata**: pulsanti «Tutti» più una voce per ogni giornata
+  dell'evento sopra la lista; nascondono le card e i marker degli altri giorni
+  e si combinano con la ricerca. «Reset filtri» azzera ricerca e giornata. Con una giornata
   selezionata la lista è **ordinata per orario di apertura** (il luogo che
   apre prima quel giorno sta in cima) e card e popup mostrano **solo gli
   orari di quel giorno**: per i luoghi aperti più giorni (es. sabato e
   domenica) non compare la parte degli altri giorni. Nella vista «Tutti»
   l'ordine resta alfabetico e gli orari sono completi.
-- **Tour personale (★) per giornata**: con una giornata selezionata (Ven 2 ·
-  Sab 3 · Dom 4), il pulsante a stella sulla card aggiunge il luogo al tour
+- **Tour personale (★) per giornata**: con una giornata selezionata, il
+  pulsante a stella sulla card aggiunge il luogo al tour
   **di quel giorno**: passando a un altro giorno la stella non appare (e i
   suoi conflitti nemmeno), a meno di metterla anche lì. La selezione resta
   salvata nel browser (`localStorage`, chiave `mytour-scelte-per-giorno-v1`)
@@ -70,11 +72,13 @@ poi apri http://localhost:8123/ — oppure con l'estensione Live Server di VS Co
   Cliccando il campo sbloccato si riblocca; aggiornando la pagina si torna
   bloccati comunque.
 - **Avvisi di conflitto orario a livello di giornata**: con un giorno
-  selezionato (Ven 2 · Sab 3 · Dom 4), un avviso giallo su card e popup
+  selezionato, un avviso giallo sulla card della lista
   segnala quando due visite di QUEL giorno si sovrappongono o si susseguono
   con meno di 30 minuti di margine (costante `MARGINE_CONFLITTO_MIN` in testa
   ad `app.js`). I confronti riguardano i luoghi scelti con ★ **e** i
-  candidati arancio (aperti solo quel giorno, vicini al tour). Contatore
+  candidati arancio (aperti solo quel giorno, vicini al tour). Ogni luogo in
+  conflitto compare UNA sola volta nell'avviso, anche se più fasce si
+  sovrappongono. Contatore
   «⚠ N in conflitto» sopra la lista; nella vista «Tutti» gli avvisi non
   compaiono.
 - **Popup snellito**: il popup del marker mostra nome, indirizzo, link
@@ -82,7 +86,7 @@ poi apri http://localhost:8123/ — oppure con l'estensione Live Server di VS Co
   sito openhousenapoli.org) e la nota 🟠 dei candidati; foto, orari e avvisi
   di conflitto restano sulla card della lista.
 - **Import dei dati ufficiali** (`_strumenti/importa_preferiti.py`): dal
-  salvataggio HTML della pagina «My tour» del sito OHN estrae i 30 luoghi,
+  salvataggio HTML della pagina «My tour» del sito OHN estrae i luoghi,
   li confronta con `data.js` (titolo normalizzato) e riporta le differenze
   di indirizzo/orari; con `--scrivi` aggiunge il campo `url` ufficiale a
   ogni voce (idempotente). Procedura per i prossimi aggiornamenti: salva la
@@ -106,7 +110,7 @@ poi apri http://localhost:8123/ — oppure con l'estensione Live Server di VS Co
   `data.js` (con giorno ereditato dalle fasce successive, deduplica e
   tolleranza ai testi non interpretabili, che restano sempre visibili).
 - **Pannello «🔍 Verifica OCR»**: strumento di verifica usato in fase di build
-  (tutti i 30 punti confermati). NON è nell'interfaccia pubblica: si accede
+  (tutti i punti confermati). NON è nell'interfaccia pubblica: si accede
   solo con il link **`?verifica=1`** (es. `https://ohn26.pages.dev/?verifica=1`),
   che ricrea il pulsante in alto e apre il pannello; le modifiche fatte lì
   restano nel browser (`localStorage`) e si applicano a mappa, lista e popup.
@@ -154,9 +158,21 @@ remoto `origin` del repo locale). Collegando questo repository a Cloudflare
 Pages il push diventerebbe deploy automatico: per ora il deploy resta manuale
 con Direct Upload.
 
+## Nuova edizione
+
+L'app non contiene riferimenti descrittivi all'edizione corrente (anno, date,
+numero dei luoghi): i dati vivono solo in `data.js`. Per una nuova edizione:
+
+1. aggiorna `data.js` (titoli, indirizzi, orari `when`, coordinate, `url`);
+   per orari e schede ufficiali usa `importa_preferiti.py`;
+2. se gli indirizzi cambiano, ricalcola le coordinate con `geocode.py`;
+3. allinea in `index.html` solo le etichette dei pulsanti delle giornate
+   (es. «Ven 2 · Sab 3 · Dom 4»: i tasti restano gli stessi, cambia il testo);
+4. ripeti il deploy.
+
 ## Verifica OCR — esito
 
-Verifica completata in pagina dall'utente: **30/30 punti confermati** senza
+Verifica completata in pagina dall'utente: **tutti i punti confermati** senza
 modifiche (export JSON del pannello confrontato con `data.js`: nessuna
 differenza). Il segnalatore di «I (NON) LUOGHI DEL PORTO» è stato posizionato
 a mano a fine via De Gasperi, incrocio con Piazza Municipio.
