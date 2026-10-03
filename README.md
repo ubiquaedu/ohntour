@@ -149,6 +149,11 @@ l'export JSON convertito in `export const luoghi = [...]`), controlla in locale
 e ripeti il deploy (con Direct Upload basta ricaricare i file nello stesso
 progetto: nasce un nuovo deployment).
 
+**Repository del codice**: https://github.com/ubiquaedu/ohntour (branch `main`,
+remoto `origin` del repo locale). Collegando questo repository a Cloudflare
+Pages il push diventerebbe deploy automatico: per ora il deploy resta manuale
+con Direct Upload.
+
 ## Verifica OCR — esito
 
 Verifica completata in pagina dall'utente: **30/30 punti confermati** senza

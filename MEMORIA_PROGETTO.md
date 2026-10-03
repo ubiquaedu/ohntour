@@ -215,9 +215,21 @@
 
 ## Repository git
 
-- `D:\coding\ohn` NON è un repository git (decisione: «per ora niente repo»).
-  Se in futuro si crea: `.gitignore` deve escludere `.freebuff/`; valutare se
-  includere `mytour.png` (3 MB) e `_strumenti/`.
+- Repo locale creato (02/10): branch `main`, commit iniziale `c4ee6ce` (41
+  file, «Commit iniziale: «My Tour» — mappa dei 30 luoghi di Open House Napoli
+  2026»), working tree pulita.
+- `.gitignore` esclude: `.freebuff/` (metadati assistente), `mytour.png`
+  (sorgente OCR, 3 MB) e `_strumenti/*.html` (salvataggi HTML dei preferiti).
+- **Remote**: `origin` = `https://github.com/ubiquaedu/ohntour.git` — repo
+  GitHub pubblico **ubiquaedu/ohntour**, creato dall'utente via browser (la
+  CLI `gh` non è installata). `main` traccia `origin/main`; primo push
+  eseguito (03/10) e verificato con `git ls-remote` (stesso hash sui due
+  lati). Push via https con Git Credential Manager (credenziali già
+  memorizzate su Windows: nessun prompt).
+- Commit e push SOLO su richiesta esplicita dell'utente (regola generale in
+  `D:\coding\agents.md`).
+- Futuro possibile (NON fatto): collegare il repo GitHub al progetto
+  Cloudflare Pages per il deploy automatico (push = deploy).
 
 ## Ambiente locale
 
