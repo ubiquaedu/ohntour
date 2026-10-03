@@ -1,4 +1,4 @@
-// Dati estratti via OCR da mytour.png — itinerario «My Tour», Open House Napoli 2026 (2-4 ottobre).
+// Dati estratti via OCR da mytour.png — itinerario «My OHN Tour», Open House Napoli 2026 (2-4 ottobre).
 // VERIFICA OCR COMPLETATA: tutti i 30 punti confermati dall'utente in pagina (export del pannello Verifica).
 // Ordine alfabetico come nella lista originale. Le coordinate sono pre-calcolate con Nominatim
 // (vedi _strumenti/geocode.py): la mappa non dipende dal geocoding al volo.

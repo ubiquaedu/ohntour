@@ -1,4 +1,4 @@
-// App «My Tour» — mappa OpenStreetMap dei luoghi estratti via OCR da mytour.png.
+// App «My OHN Tour» — mappa OpenStreetMap dei luoghi estratti via OCR da mytour.png.
 // Nessuna funzione di eliminazione: la lista è di sola consultazione, con ricerca,
 // verifica OCR, filtro per giornata, tour personale con avvisi di conflitto
 // orario a livello di giornata e link «Apri in Google Maps» nel popup.

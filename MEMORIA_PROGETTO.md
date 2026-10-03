@@ -1,4 +1,4 @@
-# Memoria progetto — App web «My Tour» (D:\coding\ohn)
+# Memoria progetto — App web «My OHN Tour» (D:\coding\ohn)
 
 > File di memoria per le chat AI: leggere PRIMA di intervenire. Le regole
 > generali valide per tutte le app sono in `D:\coding\agents.md` (rispondere
@@ -7,10 +7,15 @@
 
 ## Cosa è
 
-- Mini app web **statica** «My Tour»: mappa OpenStreetMap (Leaflet 1.9.4 via
+- Mini app web **statica** «My OHN Tour»: mappa OpenStreetMap (Leaflet 1.9.4 via
   CDN) con i **30 luoghi** dell'itinerario «Fuori Porta» di Open House Napoli
   2026 (2–4 ottobre), estratti via OCR dall'immagine `mytour.png` e **verificati
   dall'utente in pagina (30/30 confermati)**.
+- **Rinomina (03/10)**: l'app si chiama **«My OHN Tour»** (nome scelto
+  dall'utente; descrizione: «Mappa personalizzata per Open House Napoli»).
+  Aggiornati titolo pagina, header, README e commenti. Restano INVARIATI le
+  chiavi `localStorage` `mytour-*`, il file `mytour.png` e la pagina «My
+  tour» di openhousenapoli.org (nomi funzionali/esterni).
 - Pubblicata su **https://ohn26.pages.dev** (Cloudflare Pages, Direct Upload).
 - Nessun backend, nessuna dipendenza npm: solo file statici. Nessun pulsante
   ELIMINA (richiesta esplicita: la lista è di sola consultazione).

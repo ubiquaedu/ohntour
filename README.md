@@ -1,7 +1,7 @@
-# My Tour — Mappa dei luoghi (Open House Napoli 2026)
+# My OHN Tour — Mappa personalizzata per Open House Napoli
 
 Mini app web statica: **mappa OpenStreetMap** (Leaflet) con i 30 luoghi dell'itinerario
-«My Tour» (2–4 ottobre 2026), estratti via OCR da `mytour.png` e **verificati
+«My OHN Tour» (2–4 ottobre 2026), estratti via OCR da `mytour.png` e **verificati
 dall'utente in pagina** (pannello Verifica OCR, 30/30 confermati).
 
 ## Contenuti
