@@ -23,8 +23,7 @@
   `testoWhenDelGiorno` non fissa più «ottobre»). Restano INTATTI i dati
   funzionali dell'edizione corrente (date e orari nei `when` di data.js), i
   pulsanti «Ven 2 · Sab 3 · Dom 4» (funzionali: per la nuova edizione cambia
-  solo l'etichetta) e gli URL (ohn26.pages.dev, progetto ohn26). README con
-  nuova sezione «Nuova edizione».
+  solo l'etichetta) e gli URL. README con nuova sezione «Nuova edizione».
 - **Bug conflitti duplicati (03/10, segnalazione utente)**:
   `conflittiPerLuogo` aggiungeva un avviso PER OGNI COPPIA di fasce
   sovrapposte: con due luoghi da due fasce nello stesso giorno (es. ODEON e
@@ -34,7 +33,17 @@
   plurale («10:00–13:00 e 15:00–18:00 vanno in conflitto con…»). Verificato
   nel browser: un avviso per località, contatore «⚠ N in conflitto» invariato
   (conta i luoghi).
-- Pubblicata su **https://ohn26.pages.dev** (Cloudflare Pages, Direct Upload).
+- **Deploy Git-connected attivo (04/10)**: l'utente ha collegato il repo
+  GitHub `ubiquaedu/ohntour` a un nuovo progetto Cloudflare Pages →
+  **https://myohntour.pages.dev** (ogni push su main = deploy automatico).
+  Il vecchio progetto Direct Upload «ohn26» (https://ohn26.pages.dev) resta
+  online con dati vecchi: NON aggiornarlo più.
+- **Mail di contatto sotto il titolo (04/10)**: in index.html nella `.brand`,
+  sotto la `.brand-sub`, nuovo link `.brand-mail` (mailto:ubiqua.edu@gmail.com),
+  stile discreto in style.css (muted 11px, hover sottolineato). Commit b84e6db,
+  verificato sul sito live.
+- Pubblicata su **https://myohntour.pages.dev** (Cloudflare Pages, deploy
+  automatico da GitHub; prima edizione: https://ohn26.pages.dev, Direct Upload).
 - Nessun backend, nessuna dipendenza npm: solo file statici. Nessun pulsante
   ELIMINA (richiesta esplicita: la lista è di sola consultazione).
 - **Filtro per giornata** (Tutti · Ven 2 · Sab 3 · Dom 4): nasconde le card E i
@@ -226,16 +235,17 @@
 - `_strumenti/` = geocode.py, confronta_export.py, risultati.json (build, non pubblicabili ma innocue).
 - `README.md` = avvio locale, funzioni, deploy Cloudflare, esito verifica.
 
-## Deploy Cloudflare Pages (progetto ohn26)
+## Deploy Cloudflare Pages
 
-- Metodo: Direct Upload (drag & drop della cartella) su dash.cloudflare.com →
-  Workers & Pages → progetto **ohn26** → https://ohn26.pages.dev.
-- REGOLA CRITICA: ogni deployment SOSTITUISCE TUTTI i file (non incrementale).
-  Un deployment con file parziali (solo index.html) NON diventa attivo: resta
-  quello precedente. Caricare SEMPRE tutti e 4 i file + `assets/`.
-- Dopo il deploy: Ctrl+F5 (cache browser).
-- L'utente ha visto che si può collegare un repository GitHub per il deploy
-  automatico (push = deploy): possibile futuro, NON ancora fatto.
+- ATTIVO: progetto Git-connected collegato a GitHub `ubiquaedu/ohntour` →
+  **https://myohntour.pages.dev**. Ogni push su `main` = deploy automatico
+  (≈1 minuto). Il browser potrebbe servire la versione in cache: verificare con
+  `?v=2` in coda all'URL se serve.
+- Precedente: progetto Direct Upload **ohn26** → https://ohn26.pages.dev
+  (dati vecchi, ancora online ma NON aggiornarlo più).
+- Nota: in una prima schermata Cloudflare ha proposto la creazione di un
+  «worker»; l'utente ha poi completato il collegamento del repo da solo e il
+  deploy Git-connected funziona.
 
 ## Repository git
 

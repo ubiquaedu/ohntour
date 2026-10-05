@@ -111,7 +111,7 @@ poi apri http://localhost:8123/ — oppure con l'estensione Live Server di VS Co
   tolleranza ai testi non interpretabili, che restano sempre visibili).
 - **Pannello «🔍 Verifica OCR»**: strumento di verifica usato in fase di build
   (tutti i punti confermati). NON è nell'interfaccia pubblica: si accede
-  solo con il link **`?verifica=1`** (es. `https://ohn26.pages.dev/?verifica=1`),
+  solo con il link **`?verifica=1`** (es. `https://myohntour.pages.dev/?verifica=1`),
   che ricrea il pulsante in alto e apre il pannello; le modifiche fatte lì
   restano nel browser (`localStorage`) e si applicano a mappa, lista e popup.
   Anche il contatore «✓ verificato» in barra appare solo in questa vista
@@ -121,14 +121,23 @@ poi apri http://localhost:8123/ — oppure con l'estensione Live Server di VS Co
 - **Ripristina originali**: riporta i dati OCR di partenza.
 - Nessuna funzione di eliminazione: la lista è di sola consultazione.
 - Deep link per condividere un punto: `?vai=<id>`
-  (es. `https://ohn26.pages.dev/?vai=16-i-non-luoghi-porto`).
+  (es. `https://myohntour.pages.dev/?vai=16-i-non-luoghi-porto`).
 - Combinabili: `?verifica=1&vai=<id>` apre il pannello e poi centra il punto.
 
-## Pubblicazione su Cloudflare Pages (dopo la verifica OCR)
+## Pubblicazione su Cloudflare Pages
 
-La cartella è tutta statica: si pubblica senza build.
+La cartella è tutta statica: si pubblica senza build. **Il sito è online su
+https://myohntour.pages.dev** (precedente edizione: https://ohn26.pages.dev,
+progetto Direct Upload con dati vecchi, ancora online).
 
-**Metodo Direct Upload (consigliato, senza riga di comando)**
+**Deploy automatico da GitHub (attivo)**
+
+Il repository https://github.com/ubiquaedu/ohntour (branch `main`) è collegato
+a un progetto Cloudflare Pages Git-connected: **ogni push su `main` produce un
+nuovo deploy automatico** su https://myohntour.pages.dev (circa un minuto).
+Non serve ricaricare file a mano.
+
+**Metodo Direct Upload (alternativa, senza riga di comando)**
 
 1. Vai su https://dash.cloudflare.com → **Workers & Pages** → **Create** →
    scheda **Pages** → **Upload assets** (caricamento diretto).
@@ -150,13 +159,8 @@ wrangler pages deploy . --project-name ohn26
 
 Per aggiornare i dati dopo la verifica: modifica `data.js` (o sostituiscilo con
 l'export JSON convertito in `export const luoghi = [...]`), controlla in locale
-e ripeti il deploy (con Direct Upload basta ricaricare i file nello stesso
-progetto: nasce un nuovo deployment).
-
-**Repository del codice**: https://github.com/ubiquaedu/ohntour (branch `main`,
-remoto `origin` del repo locale). Collegando questo repository a Cloudflare
-Pages il push diventerebbe deploy automatico: per ora il deploy resta manuale
-con Direct Upload.
+e fai commit+push (il deploy parte da solo). Con Direct Upload basta invece
+ricaricare i file nello stesso progetto: nasce un nuovo deployment.
 
 ## Nuova edizione
 
@@ -168,7 +172,7 @@ numero dei luoghi): i dati vivono solo in `data.js`. Per una nuova edizione:
 2. se gli indirizzi cambiano, ricalcola le coordinate con `geocode.py`;
 3. allinea in `index.html` solo le etichette dei pulsanti delle giornate
    (es. «Ven 2 · Sab 3 · Dom 4»: i tasti restano gli stessi, cambia il testo);
-4. ripeti il deploy.
+4. fai commit+push: il deploy su Cloudflare Pages parte da solo.
 
 ## Verifica OCR — esito
 
