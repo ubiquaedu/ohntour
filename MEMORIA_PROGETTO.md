@@ -42,6 +42,17 @@
   sotto la `.brand-sub`, nuovo link `.brand-mail` (mailto:ubiqua.edu@gmail.com),
   stile discreto in style.css (muted 11px, hover sottolineato). Commit b84e6db,
   verificato sul sito live.
+- **Riepilogo unico dei conflitti (04/10, richiesta esplicita)**: con molte
+  stelle gli avvisi di conflitto si ripetevano in più card allungando troppo
+  la lista. Tolto il box `.card-conflitto` dalle card: ora un UNICO pannello
+  `#riepilogoConflitti` in testa alla lista (prima dei filtri di giornata)
+  mostra una RIGA PER COPPIA di luoghi (dedup per coppia non ordinata: la
+  coppia A/B e B/A diventa una riga sola, fasce riattribuite al lato giusto),
+  con i nomi cliccabili (`data-vai-conflitto` → `vaiAlLuogo`) e pulsante
+  «Nascondi» (`riepilogoChiuso`, NON persistito: ogni `refreshConflitti()` —
+  stella o cambio giornata — lo resetta e il pannello riappare). Visibile
+  solo con giornata selezionata e almeno un conflitto; nascosto in «Tutti».
+  Commit ab15ef8, verificato nel browser (ODEON/GARIBALDI/BASILICA).
 - Pubblicata su **https://myohntour.pages.dev** (Cloudflare Pages, deploy
   automatico da GitHub; prima edizione: https://ohn26.pages.dev, Direct Upload).
 - Nessun backend, nessuna dipendenza npm: solo file statici. Nessun pulsante
