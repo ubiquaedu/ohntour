@@ -14,6 +14,10 @@ const tourCountEl = document.getElementById("tourCount");
 const conflittiCountEl = document.getElementById("conflittiCount");
 const resetScelteBtn = document.getElementById("resetScelteBtn");
 const legendaViciniEl = document.getElementById("legendaVicini");
+const riepilogoConflittiEl = document.getElementById("riepilogoConflitti");
+const riepilogoTitoloEl = document.getElementById("riepilogoTitolo");
+const riepilogoListaEl = document.getElementById("riepilogoLista");
+const chiudiConflittiBtn = document.getElementById("chiudiConflitti");
 const verificaBtn = document.getElementById("verificaBtn");
 const verificaPanel = document.getElementById("verificaPanel");
 const verificaList = document.getElementById("verificaList");
@@ -499,7 +503,6 @@ function cardHTML(luogo) {
       <p class="card-title"></p>
       <p class="card-addr"></p>
       <p class="card-when"></p>
-      <div class="card-conflitto" hidden></div>
     </div>
     <div class="card-side">
       ${badge}
@@ -507,19 +510,6 @@ function cardHTML(luogo) {
       ${star}
       ${del}
     </div>`;
-}
-
-function aggiornaConflittiCard(card, luogo) {
-  const box = card.querySelector(".card-conflitto");
-  if (!box) return;
-  const conflitti = conflittiPerLuogo(luogo.id, datiCorrenti());
-  if (conflitti.length) {
-    box.innerHTML = conflitti.map((c) => `<p>⚠ ${testoConflitto(c)}</p>`).join("");
-    box.hidden = false;
-  } else {
-    box.innerHTML = "";
-    box.hidden = true;
-  }
 }
 
 function creaCard(luogo) {
@@ -530,7 +520,6 @@ function creaCard(luogo) {
   card.querySelector(".card-title").textContent = campo(luogo, "title");
   card.querySelector(".card-addr").textContent = campo(luogo, "address");
   card.querySelector(".card-when").textContent = testoWhenVisualizzato(luogo);
-  aggiornaConflittiCard(card, luogo);
   card.addEventListener("click", (e) => {
     if (e.target.closest("[data-vai]")) return;
     if (e.target.closest("[data-scelta]")) return;
@@ -540,6 +529,12 @@ function creaCard(luogo) {
   return card;
 }
 
+// Riepilogo UNICO dei conflitti sopra la lista (sostituisce gli avvisi sulle
+// singole card: con molte stelle i conflitti si ripetevano in più schede,
+// allungando troppo la lista). Una riga per luogo in conflitto, con i luoghi
+// cliccabili per centrarli sulla mappa. Visibile solo con una giornata
+// selezionata e almeno un conflitto; chiusura manuale fino al prossimo
+// aggiornamento (cambio stella o di giornata).
 function vaiAlLuogo(id) {
   const luogo = datiCorrenti().find((l) => l.id === id);
   const marker = markerPerId.get(id);
@@ -548,6 +543,69 @@ function vaiAlLuogo(id) {
   marker.openPopup();
   evidenziaCardLista(id);
 }
+
+// Aggiorna il riepilogo unico dei conflitti sopra la lista: UNA riga per
+// coppia di luoghi in conflitto (non una per senso di marcia: la coppia
+// ODEON/GARIBALDI comparirebbe due volte). Entrambi i nomi sono cliccabili
+// per centrarli sulla mappa. Visibile solo con una giornata selezionata e
+// almeno un conflitto; se l'utente lo ha nascosto con «Nascondi» resta
+// chiuso fino al prossimo aggiornamento (cambio di stella o di giornata).
+function aggiornaRiepilogoConflitti() {
+  riepilogoConflittiEl.hidden = true;
+  riepilogoListaEl.innerHTML = "";
+  if (!giornoFiltro) return;
+  const lista = datiCorrenti();
+  // raggruppa per coppia NON ordinata di id: le fasce dei due sensi si fondono
+  const coppie = new Map();
+  for (const l of lista) {
+    for (const c of conflittiPerLuogo(l.id, lista)) {
+      const chiave = [l.id, c.idAltro].sort().join("\n");
+      if (!coppie.has(chiave)) coppie.set(chiave, []);
+      coppie.get(chiave).push({ idA: l.id, titoloA: campo(l, "title"), c });
+    }
+  }
+  if (coppie.size === 0) return;
+  const righe = [];
+  for (const v of coppie.values()) {
+    const x = v[0];
+    // riattriibusco le fasce al lato giusto prima di comporre la riga
+    let fasceA = [];
+    let fasceB = [];
+    for (const e of v) {
+      const [fa, fb] = e.idA === x.idA ? [e.c.fasceA, e.c.fasceB] : [e.c.fasceB, e.c.fasceA];
+      fasceA.push(...fa);
+      fasceB.push(...fb);
+    }
+    fasceA = [...new Set(fasceA.map(formattaOraDiFascia))];
+    fasceB = [...new Set(fasceB.map(formattaOraDiFascia))];
+    righe.push(
+      `<p>⚠ <button class="vai-conflitto" data-vai-conflitto="${x.idA}" type="button">${x.titoloA}</button>` +
+      ` (${fasceA.join(", ")}) ✕ <button class="vai-conflitto" data-vai-conflitto="${x.c.idAltro}" type="button">${x.c.titolo}</button>` +
+      ` (${fasceB.join(", ")})</p>`
+    );
+  }
+  riepilogoTitoloEl.textContent = `⚠ Conflitti d'orario — ${ETICHETTA_GIORNO[giornoFiltro]}`;
+  riepilogoListaEl.innerHTML = righe.join("");
+  riepilogoConflittiEl.hidden = riepilogoChiuso;
+}
+
+function formattaOraDiFascia(f) {
+  return `${formattaOra(f.inizio)}–${formattaOra(f.fine)}`;
+}
+
+// Nasconde il riepilogo fino al prossimo aggiornamento (cambio stella o di
+// giornata): non persistito, al refresh della pagina torna visibile.
+let riepilogoChiuso = false;
+chiudiConflittiBtn.addEventListener("click", () => {
+  riepilogoChiuso = true;
+  riepilogoConflittiEl.hidden = true;
+});
+
+// Click su un nome nel riepilogo: centra il luogo sulla mappa.
+riepilogoListaEl.addEventListener("click", (e) => {
+  const btn = e.target.closest("[data-vai-conflitto]");
+  if (btn) vaiAlLuogo(btn.dataset.vaiConflitto);
+});
 
 // Mappa → lista (richiesta esplicita, soprattutto mobile): quando si apre il
 // popup di un marker, la lista scorre fino alla card di quel luogo e la
@@ -627,13 +685,13 @@ function resetScelte() {
   aggiornaColoriMarker();
 }
 
-// Rinfresca gli avvisi di conflitto (card + popup aperto) e i contatori del tour.
+// Rinfresca riepilogo conflitti e contatori del tour (gli avvisi non stanno
+// più sulle singole card: tutto nel pannello sopra la lista).
 function refreshConflitti() {
   const lista = datiCorrenti();
-  for (const card of listEl.children) {
-    const luogo = lista.find((l) => l.id === card.dataset.id);
-    if (luogo) aggiornaConflittiCard(card, luogo);
-  }
+  // ogni aggiornamento (stella aggiunta/tolta, cambio giornata) riapre il
+  // riepilogo: «Nascondi» vale solo finché i dati non cambiano
+  riepilogoChiuso = false;
   for (const [id, marker] of markerPerId) {
     const popup = marker.getPopup();
     const luogo = lista.find((l) => l.id === id);
@@ -642,6 +700,7 @@ function refreshConflitti() {
   const nConflitti = lista.filter((l) => conflittiPerLuogo(l.id, lista).length > 0).length;
   conflittiCountEl.hidden = nConflitti === 0;
   conflittiCountEl.textContent = `⚠ ${nConflitti} in conflitto`;
+  aggiornaRiepilogoConflitti();
   // con un giorno attivo il contatore riguarda solo quel giorno; in «Tutti» la somma
   const nScelte = giornoFiltro ? scelteDelGiorno().size : totScelte();
   tourCountEl.hidden = nScelte === 0;

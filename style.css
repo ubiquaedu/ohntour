@@ -342,6 +342,40 @@ body {
 }
 .giorno-btn.attivo:hover { background: var(--accent2); }
 
+/* ---------- riepilogo conflitti (sezione sopra la lista) ---------- */
+/* Un unico pannello al posto degli avvisi ripetuti su ogni scheda: con molte
+   stelle gli stessi luoghi comparivano in conflitto in più card, allungando
+   troppo la lista. Chiusura manuale (riappare al prossimo aggiornamento). */
+.riepilogo-conflitti {
+  margin: 10px 12px 0;
+  border: 1px solid rgba(255, 224, 138, 0.45);
+  background: rgba(255, 224, 138, 0.08);
+  border-radius: 12px;
+  padding: 10px 12px;
+}
+.riepilogo-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 8px;
+}
+.riepilogo-head h3 { margin: 0; font-size: 13px; color: var(--giallo); }
+.riepilogo-head .btn { flex: 0 0 auto; }
+.riepilogo-lista { margin-top: 8px; }
+.riepilogo-lista p { margin: 0 0 5px; color: var(--giallo-scuro); font-size: 12px; line-height: 1.4; }
+.riepilogo-lista p:last-child { margin-bottom: 0; }
+.vai-conflitto {
+  background: none;
+  border: none;
+  padding: 0;
+  color: var(--giallo);
+  font: inherit;
+  font-weight: 800;
+  cursor: pointer;
+  text-decoration: underline dotted;
+}
+.vai-conflitto:hover { text-decoration: underline; }
+
 .stato-tour {
   color: var(--giallo);
   font-size: 12px;
@@ -395,19 +429,6 @@ body {
   padding: 2px 6px;
 }
 .del-btn:hover { color: var(--accent2); }
-
-.card-conflitto {
-  margin-top: 6px;
-  border: 1px solid rgba(255, 224, 138, 0.5);
-  background: rgba(255, 224, 138, 0.1);
-  color: var(--giallo-scuro);
-  border-radius: 8px;
-  padding: 6px 8px;
-  font-size: 11.5px;
-  line-height: 1.4;
-}
-.card-conflitto p { margin: 0 0 4px; }
-.card-conflitto p:last-child { margin-bottom: 0; }
 
 /* ---------- popup Leaflet ---------- */
 .leaflet-popup-content-wrapper { border-radius: 12px; }

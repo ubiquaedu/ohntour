@@ -32,6 +32,14 @@
         <h2>Luoghi <span id="conteggio"></span></h2>
         <button id="resetBtn" class="btn btn-ghost btn-small" type="button">Reset filtri</button>
       </div>
+      <div id="riepilogoConflitti" class="riepilogo-conflitti" hidden>
+        <div class="riepilogo-head">
+          <h3 id="riepilogoTitolo">⚠ Conflitti d'orario</h3>
+          <button id="chiudiConflitti" class="btn btn-ghost btn-small" type="button"
+            title="Nasconde il riepilogo (riappare al prossimo cambio di stella o di giornata)">Nascondi</button>
+        </div>
+        <div id="riepilogoLista" class="riepilogo-lista"></div>
+      </div>
       <div class="filtri-giornata" role="group" aria-label="Filtro per giornata">
         <button class="giorno-btn attivo" data-giorno="" type="button">Tutti</button>
         <button class="giorno-btn" data-giorno="ven" type="button">Ven 2</button>
