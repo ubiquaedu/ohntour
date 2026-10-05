@@ -364,6 +364,11 @@ body {
 .riepilogo-lista { margin-top: 8px; }
 .riepilogo-lista p { margin: 0 0 5px; color: var(--giallo-scuro); font-size: 12px; line-height: 1.4; }
 .riepilogo-lista p:last-child { margin-bottom: 0; }
+.riepilogo-nota {
+  color: var(--muted);
+  font-size: 11px;
+  margin-top: 6px;
+}
 .vai-conflitto {
   background: none;
   border: none;
@@ -488,7 +493,12 @@ body {
   }
   .map-wrap { order: 0; }
   #map { height: 52vh; min-height: 300px; }
-  .list-wrap { order: 1; height: 60vh; }
+  /* Su mobile la colonna lista NON è più ingabbiata in 60vh con scroll
+     interno (il pannello conflitti lo comprimeva finché la lista non
+     scorrava più): la pagina scrolla naturalmente e la lista si estende
+     per tutto il suo contenuto. */
+  .list-wrap { order: 1; height: auto; overflow: visible; }
+  .list { overflow: visible; }
   .topbar { flex-wrap: wrap; }
   #search { max-width: none; width: 100%; order: 3; }
   .pass-admin { width: 92px; }

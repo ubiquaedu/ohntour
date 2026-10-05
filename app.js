@@ -579,14 +579,33 @@ function aggiornaRiepilogoConflitti() {
     fasceA = [...new Set(fasceA.map(formattaOraDiFascia))];
     fasceB = [...new Set(fasceB.map(formattaOraDiFascia))];
     righe.push(
-      `<p>⚠ <button class="vai-conflitto" data-vai-conflitto="${x.idA}" type="button">${x.titoloA}</button>` +
-      ` (${fasceA.join(", ")}) ✕ <button class="vai-conflitto" data-vai-conflitto="${x.c.idAltro}" type="button">${x.c.titolo}</button>` +
+      `<p>⚠ ${btnLuogoRiepilogo(x.idA, x.titoloA)}` +
+      ` (${fasceA.join(", ")}) ✕ ${btnLuogoRiepilogo(x.c.idAltro, x.c.titolo)}` +
       ` (${fasceB.join(", ")})</p>`
     );
   }
   riepilogoTitoloEl.textContent = `⚠ Conflitti d'orario — ${ETICHETTA_GIORNO[giornoFiltro]}`;
-  riepilogoListaEl.innerHTML = righe.join("");
+  // legenda solo se in qualche coppia compare un candidato arancio (luogo non
+  // stellato che partecipa ai conflitti: aperto solo quel giorno e vicino a
+  // un luogo del tour). Risponde al «perché un conflitto senza la stella?».
+  const conArancio = [...coppie.values()].some(
+    (v) => !scelteDelGiorno().has(v[0].idA) || !scelteDelGiorno().has(v[0].c.idAltro)
+  );
+  const nota = conArancio
+    ? `<p class="riepilogo-nota">🟠 = candidato vicino: aperto solo ${ETICHETTA_GIORNO[giornoFiltro]} e entro 500 m da un luogo del tour — è in conflitto anche senza stella</p>`
+    : "";
+  riepilogoListaEl.innerHTML = righe.join("") + nota;
   riepilogoConflittiEl.hidden = riepilogoChiuso;
+}
+
+// Nome del luogo nel riepilogo: se NON è nel tour della giornata è un
+// candidato arancio → prefisso 🟠 e tooltip che spiega perché è in conflitto
+// pur non avendo la stella.
+function btnLuogoRiepilogo(id, titolo) {
+  const nelTour = scelteDelGiorno().has(id);
+  return `<button class="vai-conflitto" data-vai-conflitto="${id}" type="button"${
+    nelTour ? "" : ` title="Candidato arancio: aperto solo ${ETICHETTA_GIORNO[giornoFiltro]} e entro 500 m da un luogo del tour — è in conflitto anche senza stella"`
+  }>${nelTour ? "" : "🟠 "}${titolo}</button>`;
 }
 
 function formattaOraDiFascia(f) {
