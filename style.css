@@ -38,6 +38,12 @@ body {
 .brand { display: flex; flex-direction: column; }
 .brand h1 { font-size: 17px; margin: 0; letter-spacing: 0.2px; font-weight: 800; }
 .brand-sub { color: var(--muted); font-size: 11px; }
+.brand-mail {
+  color: var(--muted);
+  font-size: 11px;
+  text-decoration: none;
+}
+.brand-mail:hover { color: var(--text); text-decoration: underline; }
 
 #search {
   flex: 1 1 auto;
