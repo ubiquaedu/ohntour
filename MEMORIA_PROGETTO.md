@@ -53,6 +53,19 @@
   stella o cambio giornata — lo resetta e il pannello riappare). Visibile
   solo con giornata selezionata e almeno un conflitto; nascosto in «Tutti».
   Commit ab15ef8, verificato nel browser (ODEON/GARIBALDI/BASILICA).
+- **Conflitti «senza stella» spiegati (04/10, domanda utente)**: i luoghi NON
+  stellati che partecipano ai conflitti sono i «candidati arancio» (aperti
+  SOLO quel giorno e entro RAGGIO_VICINI_M=500 m da un luogo stellato;
+  funzionalità voluta in passato). Caso reale: BASILICA DELLO SPIRITO SANTO
+  (aperta solo sabato, 341 m dal Liceo Garibaldi) → in conflitto con
+  GARIBALDI/ODEON stellati senza avere la stella. Ora nel riepilogo sono
+  marcati 🟠 con tooltip e legenda in fondo al pannello. Commit 63742f8.
+- **Mobile: lista a pagina intera (04/10, segnalazione utente)**: su schermi
+  ≤980px la colonna lista NON è più fissa a 60vh con scroll interno (il
+  riepilogo conflitti comprimeva `.list` finché non scorrava più): ora
+  `.list-wrap`/`.list` sono height/overflow auto-visible e la PAGINA scrolla
+  naturalmente fino all'ultima card. Su desktop resta lo scroll interno.
+  Commit 63742f8, verificato con viewport 390×844.
 - Pubblicata su **https://myohntour.pages.dev** (Cloudflare Pages, deploy
   automatico da GitHub; prima edizione: https://ohn26.pages.dev, Direct Upload).
 - Nessun backend, nessuna dipendenza npm: solo file statici. Nessun pulsante
