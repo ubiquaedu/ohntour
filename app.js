@@ -31,6 +31,9 @@ const STORAGE_SCELTE = "mytour-scelte-per-giorno-v1";
 // etichette dei giorni per i contatori («★ sabato: N»)
 const ETICHETTA_GIORNO = { ven: "venerdì", sab: "sabato", dom: "domenica" };
 const NAPOLI = [40.849, 14.25];
+// Segnalibro (richiesta utente: al posto della stella) come SVG inline:
+// eredita currentColor → si colora da .star-btn (spento/attivo) senza immagini.
+const SEGNALIBRO_SVG = `<svg class="icona-segnalibro" viewBox="0 0 24 24" width="20" height="20" aria-hidden="true" focusable="false"><path d="M6 3h12a1 1 0 0 1 1 1v17l-7-4.5L5 21V4a1 1 0 0 1 1-1z" fill="currentColor"/></svg>`;
 const ETICHETTE_CAMPI = {
   title: "Titolo",
   address: "Indirizzo",
@@ -460,7 +463,7 @@ function cardHTML(luogo) {
     : "";
   const star = giornoFiltro
     ? `<button class="star-btn ${scelta ? "attiva" : ""}" type="button" data-scelta="${luogo.id}"
-        aria-pressed="${scelta}" title="${scelta ? "Togli dal tour di " + ETICHETTA_GIORNO[giornoFiltro] : "Aggiungi al tour di " + ETICHETTA_GIORNO[giornoFiltro]}">★</button>`
+        aria-pressed="${scelta}" title="${scelta ? "Togli dal tour di " + ETICHETTA_GIORNO[giornoFiltro] : "Aggiungi al tour di " + ETICHETTA_GIORNO[giornoFiltro]}">${SEGNALIBRO_SVG}</button>`
     : "";
   return `<div class="thumb">${thumb}</div>
     <div class="card-main">
@@ -561,9 +564,9 @@ function aggiornaRiepilogoConflitti() {
     const elenco = altri.map((id, i) =>
       (i === 0 ? "" : i === altri.length - 1 ? " e " : ", ") + btnLuogoRiepilogo(id, nomi.get(id))
     ).join("");
-    return `<p>⚠ ${btnLuogoRiepilogo(soggetto, nomi.get(soggetto))} confligge con ${elenco}</p>`;
+    return `<p>⚠ ${btnLuogoRiepilogo(soggetto, nomi.get(soggetto))} in conflitto con ${elenco}</p>`;
   });
-  riepilogoTitoloEl.textContent = `⚠ Conflitti d'orario — ${ETICHETTA_GIORNO[giornoFiltro]}`;
+  riepilogoTitoloEl.textContent = `Conflitti d'orario — ${ETICHETTA_GIORNO[giornoFiltro]}`;
   riepilogoListaEl.innerHTML = righe.join("");
   riepilogoConflittiEl.hidden = riepilogoChiuso;
 }
@@ -657,7 +660,7 @@ function rimuoviDaTuttiIGiorni(id) {
 function resetScelte() {
   const tot = totScelte();
   if (!tot) return;
-  if (!confirm(`Rimuovere tutte le ${tot} stelle dal tour (tutti i giorni)?`)) return;
+  if (!confirm(`Rimuovere tutti i ${tot} segnalibri dal tour (tutti i giorni)?`)) return;
   for (const ins of Object.values(scelte)) ins.clear();
   salvaScelte();
   renderLista();
@@ -684,9 +687,10 @@ function refreshConflitti() {
   // con un giorno attivo il contatore riguarda solo quel giorno; in «Tutti» la somma
   const nScelte = giornoFiltro ? scelteDelGiorno().size : totScelte();
   tourCountEl.hidden = nScelte === 0;
-  tourCountEl.textContent = giornoFiltro
-    ? `★ ${ETICHETTA_GIORNO[giornoFiltro]}: ${nScelte}`
-    : `★ nel tour: ${nScelte}`;
+  // innerHTML (non textContent): il segnalibro è un SVG inline
+  tourCountEl.innerHTML = giornoFiltro
+    ? `${SEGNALIBRO_SVG} ${ETICHETTA_GIORNO[giornoFiltro]}: ${nScelte}`
+    : `${SEGNALIBRO_SVG} nel tour: ${nScelte}`;
   aggiornaResetScelte();
 }
 

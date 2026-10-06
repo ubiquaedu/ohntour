@@ -53,12 +53,23 @@
   stella o cambio giornata — lo resetta e il pannello riappare). Visibile
   solo con giornata selezionata e almeno un conflitto; nascosto in «Tutti».
   Commit ab15ef8, verificato nel browser (ODEON/GARIBALDI/BASILICA).
+- **Estetica (04/10, richieste esplicite)**:
+  - **Segnalibro al posto della stella**: nelle card SVG inline
+    `SEGNALIBRO_SVG` (currentColor, `.star-btn` acceso/spento invariato di
+    logica e classi); nel contatore tour `tourCountEl.innerHTML` con l'SVG
+    («🔖 sabato: N») + CSS `.stato-tour .icona-segnalibro` per l'allineamento.
+    Confirm di reset parla di «segnalibri».
+  - **Riepilogo**: intestazione SENZA ⚠ («Conflitti d'orario — giorno», il ⚠
+    resta SOLO sulle righe); testo «in conflitto con» (prima «confligge con»).
+  - **Password su mobile**: `.pass-admin` 150px nel media query ≤980px
+    (a 92px l'ultimo pallino era tagliato e il 🔓 non si leggeva; sbloccato
+    resta 64px anche su mobile). Sblocco testato con keydown Enter.
 - **Riepilogo a gruppi, zero duplicati (04/10, richiesta esplicita)**: prima
   ogni coppia era una riga («BASILICA ✕ GARIBALDI», «BASILICA ✕ ODEON»…):
   con più fasce/stelle gli stessi nomi si ripetevano e confondevano. Ora
   `aggiornaRiepilogoConflitti` costruisce il grafo NON orientato dei
   conflitti tra stellati ed estrae le COMPONENTI CONNESSE (BFS): UNA riga
-  per gruppo, formato «⚠ SOGGETTO confligge con ALTRO e ALTRO» (soggetto =
+  per gruppo, formato «⚠ SOGGETTO in conflitto con ALTRO e ALTRO» (soggetto =
   luogo col più alto grado del gruppo, a parità il primo nei dati; elenco
   ordinato per posizione in data.js, congiunzioni «e»/«,»). Nomi cliccabili
   (vaiAlLuogo). Il pannello si aggiorna a ogni stella: con 2 stelle una

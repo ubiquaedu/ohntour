@@ -359,7 +359,7 @@ body {
   align-items: center;
   gap: 8px;
 }
-.riepilogo-head h3 { margin: 0; font-size: 13px; color: var(--giallo); }
+.riepilogo-head h3 { margin: 0; font-size: 13px; color: var(--text); }
 .riepilogo-head .btn { flex: 0 0 auto; }
 .riepilogo-lista { margin-top: 8px; }
 .riepilogo-lista p { margin: 0 0 5px; color: var(--giallo-scuro); font-size: 12px; line-height: 1.4; }
@@ -380,6 +380,11 @@ body {
   color: var(--giallo);
   font-size: 12px;
   font-weight: 800;
+}
+/* Segnalibro inline nel contatore: allineato al testo */
+.stato-tour .icona-segnalibro {
+  vertical-align: -4px;
+  margin-right: 2px;
 }
 .stato-conflitti {
   color: var(--giallo);
@@ -414,6 +419,8 @@ body {
   cursor: pointer;
   padding: 2px 4px;
 }
+/* Segnalibro SVG (al posto della stella): eredita il colore dal bottone */
+.star-btn .icona-segnalibro { display: block; }
 .star-btn:hover { color: var(--giallo); }
 .star-btn.attiva { color: var(--giallo); text-shadow: 0 0 10px rgba(255, 224, 138, 0.45); }
 
@@ -496,7 +503,10 @@ body {
   .list { overflow: visible; }
   .topbar { flex-wrap: wrap; }
   #search { max-width: none; width: 100%; order: 3; }
-  .pass-admin { width: 92px; }
+  /* campo password largo abbastanza per i pallini senza tagliarli:
+     a 92px l'ultimo pallino restava nascosto e il lucchetto non si leggeva */
+  .pass-admin { width: 150px; }
+  .pass-admin.sbloccato { width: 64px; }
   .verifica-panel { inset: 0; padding-top: 60px; }
   .verifica-head { top: -60px; }
 }
