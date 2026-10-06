@@ -53,13 +53,18 @@
   stella o cambio giornata — lo resetta e il pannello riappare). Visibile
   solo con giornata selezionata e almeno un conflitto; nascosto in «Tutti».
   Commit ab15ef8, verificato nel browser (ODEON/GARIBALDI/BASILICA).
-- **Conflitti «senza stella» spiegati (04/10, domanda utente)**: i luoghi NON
-  stellati che partecipano ai conflitti sono i «candidati arancio» (aperti
-  SOLO quel giorno e entro RAGGIO_VICINI_M=500 m da un luogo stellato;
-  funzionalità voluta in passato). Caso reale: BASILICA DELLO SPIRITO SANTO
-  (aperta solo sabato, 341 m dal Liceo Garibaldi) → in conflitto con
-  GARIBALDI/ODEON stellati senza avere la stella. Ora nel riepilogo sono
-  marcati 🟠 con tooltip e legenda in fondo al pannello. Commit 63742f8.
+- **Conflitti solo tra stellati, righe solo coi nomi (04/10, richiesta esplicita)**:
+  - `conflittiPerLuogo` NON include più i candidati arancio nei confronti:
+    partecipano SOLO i luoghi scelti con ★ della giornata («è una scelta che
+    si fa al momento, non serve nei conflitti»). La BASILICA non stellata
+    (a 341 m dal Garibaldi) non genera più il terzo conflitto.
+  - Il riepilogo mostra UNA riga per coppia: «⚠ NOME ✕ NOME», senza orari
+    (richiesta: «solo il conflitto con il nome, gli orari confondono»);
+    i pulsanti-nome restano cliccabili per centrare la mappa.
+  - Rimosso il codice morto: testoConflitto, formattaOra(DiFascia), legenda
+    🟠 e classe .riepilogo-nota (CSS). slotInConflitto resta (MARGINE 30 min).
+  - Il pin arancio e la legenda «🟠 solo questo giorno, vicini al tour» restano
+    INVARIATI (segnalano il candidato, non lo mettono nei conflitti).
 - **Mobile: lista a pagina intera (04/10, segnalazione utente)**: su schermi
   ≤980px la colonna lista NON è più fissa a 60vh con scroll interno (il
   riepilogo conflitti comprimeva `.list` finché non scorrava più): ora

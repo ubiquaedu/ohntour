@@ -175,67 +175,31 @@ function slotInConflitto(a, b) {
   return margine < MARGINE_CONFLITTO_MIN;
 }
 
-// Conflitti del luogo con i luoghi «rilevanti» del giorno: gli scelti con ★
-// e i candidati arancio (aperti solo quel giorno e vicini a un luogo scelto,
-// es. INTERNO 6 accanto ad ATELIER AMBRA stellata). La verifica è a livello di
-// GIORNATA: con un giorno selezionato (ven/sab/dom) si confrontano solo le
-// fasce di quel giorno; nella vista «Tutti» non ci sono avvisi.
+// Conflitti del luogo con gli altri luoghi SCELTI con ★ della giornata
+// (richiesta utente: i candidati arancio NON partecipano più ai conflitti —
+// «è una scelta che si fa al momento»). La verifica è a livello di GIORNATA:
+// con un giorno selezionato (ven/sab/dom) si confrontano solo le fasce di
+// quel giorno; nella vista «Tutti» non ci sono avvisi.
 function conflittiPerLuogo(id, lista) {
   if (!giornoFiltro) return [];
   const scelteGiorno = scelteDelGiorno();
   if (scelteGiorno.size === 0) return [];
   const luogo = lista.find((l) => l.id === id);
   if (!luogo) return [];
-  // set dei luoghi che partecipano ai confronti: scelti con ★ + candidati arancio
-  const rilevanti = new Set(scelteGiorno);
-  for (const l of lista) if (eVicinoDaVisitare(l, lista)) rilevanti.add(l.id);
-  if (!rilevanti.has(id)) return [];
+  if (!scelteGiorno.has(id)) return [];
   const giorno = NOME_PER_GIORNO[giornoFiltro];
   const mie = parseOrari(campo(luogo, "when")).filter((f) => f.giorno === giorno);
   if (mie.length === 0) return [];
-  // UN avviso per luogo in conflitto: se due luoghi hanno più fasce che si
-  // sovrappongono (es. mattina e pomeriggio), senza raggruppamento la STESSA
-  // località comparirebbe più volte nell'avviso della card (bug segnalato
-  // dall'utente). Le fasce in conflitto si accumulano in fasceA/fasceB.
+  // UN conflitto per altro luogo: basta la prima coppia di fasce sovrapposte
+  // (nel riepilogo non si mostrano gli orari, solo i nomi).
   const gruppi = new Map();
   for (const altro of lista) {
-    if (altro.id === id || !rilevanti.has(altro.id)) continue;
+    if (altro.id === id || !scelteGiorno.has(altro.id)) continue;
     const fasceAltro = parseOrari(campo(altro, "when")).filter((f) => f.giorno === giorno);
-    for (const a of mie) {
-      for (const b of fasceAltro) {
-        if (!slotInConflitto(a, b)) continue;
-        if (!gruppi.has(altro.id)) {
-          gruppi.set(altro.id, {
-            idAltro: altro.id,
-            titolo: campo(altro, "title"),
-            fasceA: [],
-            fasceB: [],
-          });
-        }
-        const gruppo = gruppi.get(altro.id);
-        gruppo.fasceA.push(a);
-        gruppo.fasceB.push(b);
-      }
-    }
+    const tocca = fasceAltro.some((b) => mie.some((a) => slotInConflitto(a, b)));
+    if (tocca) gruppi.set(altro.id, { idAltro: altro.id, titolo: campo(altro, "title") });
   }
   return [...gruppi.values()];
-}
-
-function formattaOra(minuti) {
-  return `${String(Math.floor(minuti / 60)).padStart(2, "0")}:${String(minuti % 60).padStart(2, "0")}`;
-}
-
-// Le fasce sono già dello stesso giorno selezionato: nell'avviso basta l'ora,
-// senza il prefisso del giorno (serviva solo quando i conflitti si vedevano
-// anche nella vista «Tutti»).
-function testoConflitto(c) {
-  const ora = (f) => `${formattaOra(f.inizio)}–${formattaOra(f.fine)}`;
-  // orari deduplicati: più fasce dell'altro luogo che si sovrappongono alla
-  // stessa fascia ripetevano lo stesso intervallo nel messaggio
-  const a = [...new Set(c.fasceA.map(ora))];
-  const b = [...new Set(c.fasceB.map(ora))];
-  const verbo = a.length > 1 ? "vanno in conflitto" : "va in conflitto";
-  return `${a.join(" e ")} ${verbo} con «${c.titolo}» (${b.join(", ")})`;
 }
 
 // ---------- mappa ----------
@@ -555,61 +519,29 @@ function aggiornaRiepilogoConflitti() {
   riepilogoListaEl.innerHTML = "";
   if (!giornoFiltro) return;
   const lista = datiCorrenti();
-  // raggruppa per coppia NON ordinata di id: le fasce dei due sensi si fondono
+  // una riga per coppia di luoghi stellati in conflitto (conflittiPerLuogo è
+  // simmetrica: la coppia A/B compare da entrambi i lati → chiave ordinata)
   const coppie = new Map();
   for (const l of lista) {
     for (const c of conflittiPerLuogo(l.id, lista)) {
       const chiave = [l.id, c.idAltro].sort().join("\n");
-      if (!coppie.has(chiave)) coppie.set(chiave, []);
-      coppie.get(chiave).push({ idA: l.id, titoloA: campo(l, "title"), c });
+      coppie.set(chiave, { idA: l.id < c.idAltro ? l.id : c.idAltro, idB: l.id < c.idAltro ? c.idAltro : l.id });
     }
   }
   if (coppie.size === 0) return;
-  const righe = [];
-  for (const v of coppie.values()) {
-    const x = v[0];
-    // riattriibusco le fasce al lato giusto prima di comporre la riga
-    let fasceA = [];
-    let fasceB = [];
-    for (const e of v) {
-      const [fa, fb] = e.idA === x.idA ? [e.c.fasceA, e.c.fasceB] : [e.c.fasceB, e.c.fasceA];
-      fasceA.push(...fa);
-      fasceB.push(...fb);
-    }
-    fasceA = [...new Set(fasceA.map(formattaOraDiFascia))];
-    fasceB = [...new Set(fasceB.map(formattaOraDiFascia))];
-    righe.push(
-      `<p>⚠ ${btnLuogoRiepilogo(x.idA, x.titoloA)}` +
-      ` (${fasceA.join(", ")}) ✕ ${btnLuogoRiepilogo(x.c.idAltro, x.c.titolo)}` +
-      ` (${fasceB.join(", ")})</p>`
-    );
-  }
-  riepilogoTitoloEl.textContent = `⚠ Conflitti d'orario — ${ETICHETTA_GIORNO[giornoFiltro]}`;
-  // legenda solo se in qualche coppia compare un candidato arancio (luogo non
-  // stellato che partecipa ai conflitti: aperto solo quel giorno e vicino a
-  // un luogo del tour). Risponde al «perché un conflitto senza la stella?».
-  const conArancio = [...coppie.values()].some(
-    (v) => !scelteDelGiorno().has(v[0].idA) || !scelteDelGiorno().has(v[0].c.idAltro)
+  const nomi = new Map(lista.map((l) => [l.id, campo(l, "title")]));
+  const righe = [...coppie.values()].map(
+    ({ idA, idB }) =>
+      `<p>⚠ ${btnLuogoRiepilogo(idA, nomi.get(idA))} ✕ ${btnLuogoRiepilogo(idB, nomi.get(idB))}</p>`
   );
-  const nota = conArancio
-    ? `<p class="riepilogo-nota">🟠 = candidato vicino: aperto solo ${ETICHETTA_GIORNO[giornoFiltro]} e entro 500 m da un luogo del tour — è in conflitto anche senza stella</p>`
-    : "";
-  riepilogoListaEl.innerHTML = righe.join("") + nota;
+  riepilogoTitoloEl.textContent = `⚠ Conflitti d'orario — ${ETICHETTA_GIORNO[giornoFiltro]}`;
+  riepilogoListaEl.innerHTML = righe.join("");
   riepilogoConflittiEl.hidden = riepilogoChiuso;
 }
 
-// Nome del luogo nel riepilogo: se NON è nel tour della giornata è un
-// candidato arancio → prefisso 🟠 e tooltip che spiega perché è in conflitto
-// pur non avendo la stella.
+// Nome del luogo nel riepilogo, cliccabile per centrarlo sulla mappa.
 function btnLuogoRiepilogo(id, titolo) {
-  const nelTour = scelteDelGiorno().has(id);
-  return `<button class="vai-conflitto" data-vai-conflitto="${id}" type="button"${
-    nelTour ? "" : ` title="Candidato arancio: aperto solo ${ETICHETTA_GIORNO[giornoFiltro]} e entro 500 m da un luogo del tour — è in conflitto anche senza stella"`
-  }>${nelTour ? "" : "🟠 "}${titolo}</button>`;
-}
-
-function formattaOraDiFascia(f) {
-  return `${formattaOra(f.inizio)}–${formattaOra(f.fine)}`;
+  return `<button class="vai-conflitto" data-vai-conflitto="${id}" type="button">${titolo}</button>`;
 }
 
 // Nasconde il riepilogo fino al prossimo aggiornamento (cambio stella o di
