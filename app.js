@@ -509,31 +509,60 @@ function vaiAlLuogo(id) {
 }
 
 // Aggiorna il riepilogo unico dei conflitti sopra la lista: UNA riga per
-// coppia di luoghi in conflitto (non una per senso di marcia: la coppia
-// ODEON/GARIBALDI comparirebbe due volte). Entrambi i nomi sono cliccabili
-// per centrarli sulla mappa. Visibile solo con una giornata selezionata e
-// almeno un conflitto; se l'utente lo ha nascosto con «Nascondi» resta
-// chiuso fino al prossimo aggiornamento (cambio di stella o di giornata).
+// GRUPPO di luoghi in conflitto («ODEON confligge con BASILICA e LICEO»):
+// i gruppi sono le componenti connesse del grafo dei conflitti tra stellati,
+// così ogni località compare una volta sola nel pannello anche quando le
+// coppie sono tante. Il soggetto della riga è il luogo con più conflitti del
+// gruppo (a parità, il primo nei dati); tutti i nomi sono cliccabili per
+// centrarli sulla mappa. Visibile solo con una giornata selezionata e almeno
+// un conflitto; se l'utente lo ha nascosto con «Nascondi» resta chiuso fino
+// al prossimo aggiornamento (cambio di stella o di giornata).
 function aggiornaRiepilogoConflitti() {
   riepilogoConflittiEl.hidden = true;
   riepilogoListaEl.innerHTML = "";
   if (!giornoFiltro) return;
   const lista = datiCorrenti();
-  // una riga per coppia di luoghi stellati in conflitto (conflittiPerLuogo è
-  // simmetrica: la coppia A/B compare da entrambi i lati → chiave ordinata)
-  const coppie = new Map();
+  // grafo non orientato dei conflitti tra luoghi stellati
+  const adiac = new Map();
   for (const l of lista) {
     for (const c of conflittiPerLuogo(l.id, lista)) {
-      const chiave = [l.id, c.idAltro].sort().join("\n");
-      coppie.set(chiave, { idA: l.id < c.idAltro ? l.id : c.idAltro, idB: l.id < c.idAltro ? c.idAltro : l.id });
+      if (!adiac.has(l.id)) adiac.set(l.id, new Set());
+      if (!adiac.has(c.idAltro)) adiac.set(c.idAltro, new Set());
+      adiac.get(l.id).add(c.idAltro);
+      adiac.get(c.idAltro).add(l.id);
     }
   }
-  if (coppie.size === 0) return;
+  if (adiac.size === 0) return;
+  // componenti connesse (BFS)
+  const visti = new Set();
+  const gruppi = [];
+  for (const id of adiac.keys()) {
+    if (visti.has(id)) continue;
+    const gruppo = [];
+    const coda = [id];
+    visti.add(id);
+    while (coda.length) {
+      const cur = coda.pop();
+      gruppo.push(cur);
+      for (const n of adiac.get(cur)) {
+        if (!visti.has(n)) { visti.add(n); coda.push(n); }
+      }
+    }
+    gruppi.push(gruppo);
+  }
   const nomi = new Map(lista.map((l) => [l.id, campo(l, "title")]));
-  const righe = [...coppie.values()].map(
-    ({ idA, idB }) =>
-      `<p>⚠ ${btnLuogoRiepilogo(idA, nomi.get(idA))} ✕ ${btnLuogoRiepilogo(idB, nomi.get(idB))}</p>`
-  );
+  const ordine = new Map(lista.map((l, i) => [l.id, i]));
+  const righe = gruppi.map((gruppo) => {
+    const soggetto = [...gruppo].sort(
+      (a, b) => (adiac.get(b).size - adiac.get(a).size) || (ordine.get(a) - ordine.get(b))
+    )[0];
+    const altri = gruppo.filter((id) => id !== soggetto)
+      .sort((a, b) => ordine.get(a) - ordine.get(b));
+    const elenco = altri.map((id, i) =>
+      (i === 0 ? "" : i === altri.length - 1 ? " e " : ", ") + btnLuogoRiepilogo(id, nomi.get(id))
+    ).join("");
+    return `<p>⚠ ${btnLuogoRiepilogo(soggetto, nomi.get(soggetto))} confligge con ${elenco}</p>`;
+  });
   riepilogoTitoloEl.textContent = `⚠ Conflitti d'orario — ${ETICHETTA_GIORNO[giornoFiltro]}`;
   riepilogoListaEl.innerHTML = righe.join("");
   riepilogoConflittiEl.hidden = riepilogoChiuso;
