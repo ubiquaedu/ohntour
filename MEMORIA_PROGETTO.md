@@ -81,10 +81,36 @@
   `.list-wrap`/`.list` sono height/overflow auto-visible e la PAGINA scrolla
   naturalmente fino all'ultima card. Su desktop resta lo scroll interno.
   Commit 63742f8, verificato con viewport 390×844.
+- **✕ = cancella tappa in locale (04/10, chiarimento dell'utente: «almeno a
+  livello locale in questa lista dovrebbe essere cancellata»)**: il pulsante
+  «✕» (admin, password «26») NON «toglie dal tour» ma CANCELLA COMPLETAMENTE
+  la tappa dalla lista di QUESTO browser (per dispositivo, nessun sync).
+  In app.js: nuova chiave `mytour-tappe-eliminate-v1` (STORAGE_ELIMINATE,
+  array JSON di id) caricata nel Set `eliminate` e salvata da
+  `salvaEliminate()`; `datiCorrenti()` filtra `!eliminate.has(id)` → lista,
+  mappa, conflitti e contatori escludono le eliminate; nuova `datiCompleti()`
+  = tutti i luoghi originali (correzioni sì, filtro no) usata dal pannello
+  verifica, dal badge «✓ verificato» e dall'export. `eliminaTappa(id)`
+  (ex `rimuoviDaTuttiIGiorni`): conferma («Cancellare «NOME» dalla lista di
+  questo browser? Sarà ripristinabile solo dal pannello di verifica»), aggiunge
+  a eliminate, pulisce le scelte di tutti i giorni, invalida `cacheDati`,
+  rimuove il marker dalla mappa, poi renderLista/refreshConflitti/
+  aggiornaColoriMarker/aggiornaBadgeVerifica. Title del ✕: «Cancella la tappa
+  dalla lista di questo browser (ripristinabile da ?verifica=1)».
+  RIPRISTINO: nel pannello `?verifica=1` (ora su datiCompleti) la tappa
+  eliminata continua a comparire; «↺ Ripristina originali» (conferma
+  aggiornata: «Verranno eliminate anche le correzioni e le tappe cancellate
+  con la ✕») azzera eliminate, ricostruisce i marker con la nuova
+  `ricostruisciMarker()` e riporta tutto 30/30. `applicaFiltro()` ora conta
+  su `lista.length` (non sui 30 originali). Verificato nel browser: ✕ su
+  EDUCANDATO STATALE → 29 card, marker via, conteggio «(22/29)», storage
+  `["14-educandato-statale"]`, persiste al reload; ripristino → storage `[]`,
+  30 marker e tappa di nuovo in lista.
 - Pubblicata su **https://myohntour.pages.dev** (Cloudflare Pages, deploy
   automatico da GitHub; prima edizione: https://ohn26.pages.dev, Direct Upload).
-- Nessun backend, nessuna dipendenza npm: solo file statici. Nessun pulsante
-  ELIMINA (richiesta esplicita: la lista è di sola consultazione).
+- Nessun backend, nessuna dipendenza npm: solo file statici. La lista resta di
+  sola consultazione per il visitatore: la cancellazione è riservata all'admin
+  (vedi «✕ = cancella tappa in locale» più sopra).
 - **Filtro per giornata** (Tutti · Ven 2 · Sab 3 · Dom 4): nasconde le card E i
   marker degli altri giorni (scelta utente), combinabile con la ricerca; NON
   persistito — all'avvio è sempre «Tutti», così i deep link `?vai=` funzionano.
@@ -105,10 +131,10 @@
   ricarica. Contatori: «★ sabato: N» col giorno attivo, «★ nel tour: N»
   (somma) in «Tutti»; il pulsante «↺ Reset stelle» (con conferma) svuota
   TUTTI i giorni. Le stelle appaiono/scompaiono al volo al cambio di giorno.
-  Nelle viste di giorno ogni card ha anche il pulsante «✕» accanto alla stella
-  (funziona ANCHE senza stella): rimuove il luogo dal tour di tutti i giorni in
-  una volta (con conferma), per non rivederlo — e i suoi conflitti — il giorno
-  dopo la visita (richiesta esplicita); senza stelle non fa nulla.
+  Nelle viste di giorno ogni card ha anche il pulsante «✕» (sotto password,
+  funziona ANCHE senza stella). COMPORTAMENTO CAMBIATO il 04/10: non «rimuove
+  dal tour» ma CANCELLA la tappa dalla lista del browser — vedi «✕ = cancella
+  tappa in locale» più sopra.
 - **✕ sotto password** (01/10, richiesta esplicita prima del deploy: «mettere
   sotto password il tasto di cancellazione»): il pulsante «✕» delle card
   appare SOLO dopo lo sblocco con il campo «🔒 Password» in alto a destra
@@ -117,8 +143,8 @@
   `passa-errore`) e si cancella; giusta → diventa «🔓» con bordo verde e le
   card mostrano «✕» nelle viste di giorno. Click sul campo sbloccato =
   riblocca. NON persistita in localStorage: al refresh si torna bloccati;
-  l'amico che apre il sito vede solo il campo, senza ✕. `rimuoviDaTuttiIGiorni`
-  riverifica `adminSbloccato` per sicurezza.
+  l'amico che apre il sito vede solo il campo, senza ✕. `eliminaTappa`
+  (ex `rimuoviDaTuttiIGiorni`) riverifica `adminSbloccato` per sicurezza.
 - **Avvisi di conflitto orario** tra i luoghi scelti con ★, SOLO a livello di
   giornata (richiesta esplicita): con un giorno selezionato (Ven 2 · Sab 3 ·
   Dom 4) l'avviso giallo su card e popup segnala le coppie che si sovrappongono

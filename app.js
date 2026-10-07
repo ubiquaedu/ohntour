@@ -28,6 +28,9 @@ const adminPassEl = document.getElementById("adminPass");
 
 const STORAGE_KEY = "mytour-mappa-correzioni-v1";
 const STORAGE_SCELTE = "mytour-scelte-per-giorno-v1";
+// Tappe eliminate con la ✕: elenco di id, salvato nel browser (PER DISPOSITIVO,
+// richiesta esplicita: la cancellazione è locale, non modifica data.js sul sito).
+const STORAGE_ELIMINATE = "mytour-tappe-eliminate-v1";
 // etichette dei giorni per i contatori («★ sabato: N»)
 const ETICHETTA_GIORNO = { ven: "venerdì", sab: "sabato", dom: "domenica" };
 const NAPOLI = [40.849, 14.25];
@@ -75,6 +78,9 @@ let correzioni = caricaCorrezioni(); // { id: { title?, address?, when?, lat?, l
 // conflitti di sabato neanche), a meno di metterla anche per domenica.
 let scelte = caricaScelte(); // { ven: Set, sab: Set, dom: Set } di id
 let giornoFiltro = ""; // "", "ven", "sab", "dom" — non persistito: all'avvio sempre «Tutti»
+// tappe cancellate con la ✕ in questo browser: non compaiono più in lista,
+// mappa, conflitti e contatori finché non vengono ripristinate (pannello verifica).
+let eliminate = caricaEliminate(); // Set di id
 const markerPerId = new Map();
 
 // ---------- cache di calcolo ----------
@@ -86,7 +92,10 @@ const cacheOrari = new Map(); // testo «when» → fasce parseate
 const cacheDistanze = new Map(); // coppia di id → metri (haversine)
 
 function datiCorrenti() {
-  if (!cacheDati) cacheDati = luoghi.map((l) => ({ ...l, ...(correzioni[l.id] ?? {}) }));
+  if (!cacheDati)
+    cacheDati = luoghi
+      .map((l) => ({ ...l, ...(correzioni[l.id] ?? {}) }))
+      .filter((l) => !eliminate.has(l.id)); // ✕: fuori da lista, mappa e conflitti
   return cacheDati;
 }
 
@@ -115,6 +124,24 @@ function caricaScelte() {
   } catch {
     return vuoto;
   }
+}
+
+// Tutti i luoghi ORIGINALI (eliminate comprese): serve al pannello di verifica
+// per far vedere e ripristinare le tappe cancellate con la ✕.
+function datiCompleti() {
+  return luoghi.map((l) => ({ ...l, ...(correzioni[l.id] ?? {}) }));
+}
+
+function caricaEliminate() {
+  try {
+    return new Set(JSON.parse(localStorage.getItem(STORAGE_ELIMINATE)) ?? []);
+  } catch {
+    return new Set();
+  }
+}
+
+function salvaEliminate() {
+  localStorage.setItem(STORAGE_ELIMINATE, JSON.stringify([...eliminate]));
 }
 
 function salvaScelte() {
@@ -443,6 +470,17 @@ function aggiornaMarker(luogo) {
   if (marker) marker.setLatLng([luogo.lat, luogo.lon]);
 }
 
+// Ricrea tutti i marker dalla lista corrente (dopo un ripristino di tappe
+// eliminate: i marker mancanti tornano sulla mappa, quelli in eccesso escono).
+function ricostruisciMarker() {
+  for (const [id, marker] of markerPerId) {
+    map.removeLayer(marker);
+    markerPerId.delete(id);
+  }
+  datiCorrenti().forEach(creaMarker);
+  aggiornaColoriMarker();
+}
+
 // ---------- lista ----------
 function cardHTML(luogo) {
   const thumb = luogo.image
@@ -456,10 +494,10 @@ function cardHTML(luogo) {
   const scelta = scelteDelGiorno().has(luogo.id);
   // «✕» accanto alla stella: presente nelle viste di giorno SOLO dopo lo
   // sblocco con password (campo 🔒 in alto); funziona anche senza stella e
-  // rimuove il luogo dal tour di TUTTI i giorni in una volta
+  // cancella la tappa dalla lista di questo browser (ex «rimuove dal tour»)
   const del = giornoFiltro && adminSbloccato
     ? `<button class="del-btn" type="button" data-elimina="${luogo.id}"
-        title="Rimuove il luogo dal tour di tutti i giorni">✕</button>`
+        title="Cancella la tappa dalla lista di questo browser (ripristinabile da ?verifica=1)">✕</button>`
     : "";
   const star = giornoFiltro
     ? `<button class="star-btn ${scelta ? "attiva" : ""}" type="button" data-scelta="${luogo.id}"
@@ -621,7 +659,7 @@ function applicaFiltro() {
     card.classList.toggle("nascosta", !mostra);
     if (mostra) visibili++;
   }
-  conteggioEl.textContent = `(${visibili}/${luoghi.length})`;
+  conteggioEl.textContent = `(${visibili}/${lista.length})`;
   applicaFiltroMarker();
 }
 
@@ -638,21 +676,30 @@ function toggleScelta(id) {
   aggiornaColoriMarker();
 }
 
-// Rimuove il luogo dal tour di TUTTI i giorni in una volta (pulsante «✕»
-// accanto alla stella): serve dopo la visita per non rivedere il luogo — e i
-// suoi conflitti — negli altri giorni. Se il luogo non ha stelle non fa nulla
-// (nessun dialog). Doppia protezione: il tasto esiste solo dopo lo sblocco,
-// ma qui si riverifica in caso di richiamo programmatico.
-function rimuoviDaTuttiIGiorni(id) {
+// «✕» accanto al segnalibro: CANCELLA la tappa dalla lista di questo browser
+// (richiesta esplicita: scompare da lista, mappa, conflitti e contatori; le
+// scelte/giorni vengono ripulite). Il salvataggio è LOCALE (localStorage, per
+// dispositivo): data.js e il sito pubblicato non cambiano. Ripristino dal
+// pannello di verifica (?verifica=1). Il tasto esiste solo dopo lo sblocco
+// con password; qui si riverifica in caso di richiamo programmatico.
+function eliminaTappa(id) {
   if (!adminSbloccato) return;
-  const giorni = Object.keys(scelte).filter((g) => scelte[g].has(id));
-  if (giorni.length === 0) return;
-  if (!confirm(`Rimuovere «${campo(datiCorrenti().find((l) => l.id === id), "title")}» dal tour di tutti i giorni (${giorni.length})?`)) return;
-  for (const g of giorni) scelte[g].delete(id);
+  const luogo = datiCompleti().find((l) => l.id === id);
+  if (!luogo || eliminate.has(id)) return;
+  if (!confirm(`Cancellare «${campo(luogo, "title")}» dalla lista di questo browser?
+Sarà ripristinabile solo dal pannello di verifica (?verifica=1).`)) return;
+  eliminate.add(id);
+  salvaEliminate();
+  for (const ins of Object.values(scelte)) ins.delete(id); // pulizia scelte
   salvaScelte();
+  cacheDati = null;
+  // il marker va rimosso dalla mappa (datiCorrenti non lo contiene più)
+  const marker = markerPerId.get(id);
+  if (marker) { map.removeLayer(marker); markerPerId.delete(id); }
   renderLista();
   refreshConflitti();
   aggiornaColoriMarker();
+  aggiornaBadgeVerifica();
 }
 
 // «Reset stelle»: svuota il tour di TUTTI i giorni (le selezioni di prova non
@@ -777,7 +824,7 @@ listEl.addEventListener("click", (e) => {
   }
   const del = e.target.closest("[data-elimina]");
   if (del) {
-    rimuoviDaTuttiIGiorni(del.dataset.elimina);
+    eliminaTappa(del.dataset.elimina);
     return;
   }
   const btn = e.target.closest("[data-vai]");
@@ -810,7 +857,7 @@ document.querySelectorAll(".giorno-btn").forEach((btn) => {
 // ---------- verifica OCR ----------
 function aggiornaBadgeVerifica() {
   const btn = document.getElementById("verificaBtn"); // presente solo con ?verifica=1
-  const daVedere = datiCorrenti().filter(
+  const daVedere = datiCompleti().filter(
     (l) => (l.needsReview?.length ?? 0) > 0 && !correzioni[l.id]?.confermato
   ).length;
   if (btn) btn.textContent = daVedere > 0 ? `🔍 Verifica OCR (${daVedere})` : "🔍 Verifica OCR";
@@ -884,7 +931,9 @@ function creaCardVerifica(luogo) {
 }
 
 function renderVerifica() {
-  verificaList.replaceChildren(...datiCorrenti().map(creaCardVerifica));
+  // datiCompleti (non datiCorrenti): le tappe eliminate con la ✕ devono restare
+  // visibili qui, per poterle ripristinare
+  verificaList.replaceChildren(...datiCompleti().map(creaCardVerifica));
 }
 
 function aggiornaTutto() {
@@ -934,7 +983,7 @@ map.on("click", (e) => {
 });
 
 exportBtn.addEventListener("click", () => {
-  const dati = datiCorrenti().map(({ id, title, address, when, lat, lon, confermato, ...resto }) => ({
+  const dati = datiCompleti().map(({ id, title, address, when, lat, lon, confermato, ...resto }) => ({
     id, title, address, when, lat, lon, ...(confermato ? { confermato } : {}), ...resto,
   }));
   const blob = new Blob([JSON.stringify(dati, null, 2)], { type: "application/json" });
@@ -946,9 +995,12 @@ exportBtn.addEventListener("click", () => {
 });
 
 ripristinaBtn.addEventListener("click", () => {
-  if (!confirm("Ripristinare i dati originali dell'OCR? Le correzioni salvate in questo browser verranno eliminate.")) return;
+  if (!confirm("Ripristinare i dati originali dell'OCR? Verranno eliminate anche le correzioni e le tappe cancellate con la ✕ in questo browser.")) return;
   correzioni = {};
+  eliminate = new Set();
+  salvaEliminate();
   salvaCorrezioni();
+  ricostruisciMarker();
   renderVerifica();
   aggiornaTutto();
 });
