@@ -61,15 +61,27 @@
     <div class="verifica-head">
       <h2>🔍 Verifica OCR</h2>
       <div class="verifica-actions">
+        <button id="importSitoBtn" class="btn btn-ghost" type="button"
+          title="Scarica i preferiti direttamente da openhousenapoli.org (richiede l'accesso già fatto in questa finestra)">🌐 Importa dal sito</button>
+        <button id="importFileBtn" class="btn btn-ghost" type="button"
+          title="Legge il file «My tour» salvato come HTML dal browser">📄 Importa HTML</button>
+        <input id="importFileInput" type="file" accept=".html,.htm" hidden />
+        <button id="esportaStatoBtn" class="btn btn-ghost" type="button"
+          title="Scarica un JSON con dati importati, correzioni e scelte — per trasferirli su un altro dispositivo">⬇ Esporta stato</button>
+        <button id="importaStatoBtn" class="btn btn-ghost" type="button"
+          title="Ripristina un JSON esportato con «⬇ Esporta stato»">⬆ Importa stato</button>
+        <input id="importaStatoInput" type="file" accept=".json" hidden />
         <button id="exportBtn" class="btn btn-ghost" type="button">⬇ Esporta dati verificati (JSON)</button>
         <button id="ripristinaBtn" class="btn btn-ghost" type="button">↺ Ripristina originali</button>
         <button id="chiudiVerifica" class="btn btn-primary" type="button">✕ Chiudi</button>
       </div>
     </div>
+    <div id="importBox" class="import-box" hidden><p id="importMsg" class="import-msg"></p></div>
     <p class="verifica-nota">
-      Controlla i punti estratti dall'OCR dell'immagine. I campi gialli sono quelli con anomalie segnalate;
-      puoi correggere qualsiasi campo: le modifiche restano salvate in questo browser e vengono applicate
-      a mappa e lista. «Esporta» produce il JSON delle correzioni per fissarle nel file <code>data.js</code>.
+      Fonte primaria dei dati: l'import (dal sito o da file HTML). Aggiorna orari e indirizzi dalla fonte,
+      aggiunge le località nuove (geocodificate via OpenStreetMap) e ripristina le tappe cancellate per errore.
+      La ✕ cancella NEI DATI (vale per tutti i dispositivi): si ripristina con l'import o con «⬇/⬆ Esporta/Importa stato».
+      Le correzioni manuali qui sotto restano salvate in questo browser e vengono applicate a mappa e lista.
     </p>
     <div id="verificaList" class="verifica-list"></div>
   </div>

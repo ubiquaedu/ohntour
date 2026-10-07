@@ -81,36 +81,21 @@
   `.list-wrap`/`.list` sono height/overflow auto-visible e la PAGINA scrolla
   naturalmente fino all'ultima card. Su desktop resta lo scroll interno.
   Commit 63742f8, verificato con viewport 390×844.
-- **✕ = cancella tappa in locale (04/10, chiarimento dell'utente: «almeno a
-  livello locale in questa lista dovrebbe essere cancellata»)**: il pulsante
-  «✕» (admin, password «26») NON «toglie dal tour» ma CANCELLA COMPLETAMENTE
-  la tappa dalla lista di QUESTO browser (per dispositivo, nessun sync).
-  In app.js: nuova chiave `mytour-tappe-eliminate-v1` (STORAGE_ELIMINATE,
-  array JSON di id) caricata nel Set `eliminate` e salvata da
-  `salvaEliminate()`; `datiCorrenti()` filtra `!eliminate.has(id)` → lista,
-  mappa, conflitti e contatori escludono le eliminate; nuova `datiCompleti()`
-  = tutti i luoghi originali (correzioni sì, filtro no) usata dal pannello
-  verifica, dal badge «✓ verificato» e dall'export. `eliminaTappa(id)`
-  (ex `rimuoviDaTuttiIGiorni`): conferma («Cancellare «NOME» dalla lista di
-  questo browser? Sarà ripristinabile solo dal pannello di verifica»), aggiunge
-  a eliminate, pulisce le scelte di tutti i giorni, invalida `cacheDati`,
-  rimuove il marker dalla mappa, poi renderLista/refreshConflitti/
-  aggiornaColoriMarker/aggiornaBadgeVerifica. Title del ✕: «Cancella la tappa
-  dalla lista di questo browser (ripristinabile da ?verifica=1)».
-  RIPRISTINO: nel pannello `?verifica=1` (ora su datiCompleti) la tappa
-  eliminata continua a comparire; «↺ Ripristina originali» (conferma
-  aggiornata: «Verranno eliminate anche le correzioni e le tappe cancellate
-  con la ✕») azzera eliminate, ricostruisce i marker con la nuova
-  `ricostruisciMarker()` e riporta tutto 30/30. `applicaFiltro()` ora conta
-  su `lista.length` (non sui 30 originali). Verificato nel browser: ✕ su
-  EDUCANDATO STATALE → 29 card, marker via, conteggio «(22/29)», storage
-  `["14-educandato-statale"]`, persiste al reload; ripristino → storage `[]`,
-  30 marker e tappa di nuovo in lista.
+- **✕ = cancella tappa — MODELLO VECCHIO (04/10), SUPERATO il 07/10** (storia:
+  chiarimento dell'utente: «almeno a livello locale in questa lista dovrebbe
+  essere cancellata»): il pulsante «✕» (admin, password «26») NON «toglie dal
+  tour» ma CANCELLA la tappa dalla lista di QUESTO browser (per dispositivo,
+  nessun sync). Chiave `mytour-tappe-eliminate-v1` (STORAGE_ELIMINATE, Set
+  `eliminate`, `salvaEliminate()`), `datiCorrenti()` filtrava
+  `!eliminate.has(id)`, `datiCompleti()` senza filtro, ripristino da
+  `?verifica=1`. → **SOSTITUITO dal modello «cancellazione nei dati» descritto
+  nella sezione «Import come fonte primaria» più sotto** (chiave
+  `mytour-dati-importati-v1`); la vecchia chiave non viene più letta né scritta.
 - Pubblicata su **https://myohntour.pages.dev** (Cloudflare Pages, deploy
   automatico da GitHub; prima edizione: https://ohn26.pages.dev, Direct Upload).
 - Nessun backend, nessuna dipendenza npm: solo file statici. La lista resta di
   sola consultazione per il visitatore: la cancellazione è riservata all'admin
-  (vedi «✕ = cancella tappa in locale» più sopra).
+  (vedi «Import come fonte primaria» più sopra).
 - **Filtro per giornata** (Tutti · Ven 2 · Sab 3 · Dom 4): nasconde le card E i
   marker degli altri giorni (scelta utente), combinabile con la ricerca; NON
   persistito — all'avvio è sempre «Tutti», così i deep link `?vai=` funzionano.
@@ -228,6 +213,77 @@
   SOLO nella vista riservata `?verifica=1` (nella vista pubblica lo span resta
   nel DOM ma con `hidden`, così non occupa spazio). Deciso dalla costante
   `accessoVerifica` in testa ad `app.js`.
+
+## Import come fonte primaria + cancellazione NEI DATI (07/10/2026)
+
+- **Modello attuale** (piano approvato con exit_plan): i dati vivono in
+  `localStorage` alla chiave **`mytour-dati-importati-v1`**
+  (STORAGE_IMPORTATI). `datiImportati` è null finché non c'è un import: allora
+  `luoghiBase()` = `datiImportati ?? luoghi` (data.js resta il SEED).
+  - `datiCorrenti()` = luoghiBase + correzioni, FILTRANDO i luoghi senza
+    lat/lon (i nuovi importati senza coordinate non compaiono in mappa/lista
+    ma restano nel pannello verifica per essere posizionati a mano).
+  - `datiCompleti()` = luoghiBase + correzioni, senza filtro (pannello
+    verifica, badge, export).
+  - «✕» (admin «26») ora rimuove la tappa DA datiImportati (creandolo da
+    data.js se null): la cancellazione vale su TUTTI i dispositivi ed è
+    ripristinabile con l'import o con Esporta/Importa stato. Conferma:
+    «Cancellare «NOME» dai dati del tour? La cancellazione vale per tutti i
+    dispositivi; si può ripristinare con l'import (file HTML o preferiti.php)
+    o dal pannello di verifica».
+  - «↺ Ripristina originali» nel pannello verifica ora azzera SOLO le
+    correzioni (i dati importati restano): conferma «Tornare ai DATI BASE
+    attuali (import compreso)? Verranno eliminate le correzioni fatte nel
+    pannello di verifica».
+- **DUE strade di import** (pulsanti in `.verifica-actions`, pannello
+  `?verifica=1`), che convergono su `applicaImport(estrazione)`:
+  1. **«🌐 Importa dal sito»** (importSitoBtn): fetch di
+     `https://www.openhousenapoli.org/location/preferiti.php`
+     (PREF_DIRETTI) con `credentials: "include"`. Funziona solo se il browser
+     è già autenticato su openhousenapoli.org in quella finestra. Da locale
+     esce un errore CORS ATTESO (messaggio chiaro in importBox: «richiesta
+     bloccata… usa Importa HTML»); da Cloudflare Pages l'utente lo proverà —
+     se il sito risponde senza header CORS fallirà comunque: in quel caso la
+     via file è quella affidabile.
+  2. **«📄 Importa HTML»** (importFileBtn → importFileInput hidden,
+     accept=.html,.htm): il file «My tour» (preferiti) salvato come HTML dal
+     browser. PARSER `estraiLuoghiDaHTML(testo)`: per ogni `<tr>`, prende il
+     `<b>` e il link `location.php?l=<n>` che lo CONTIENE (gli altri link sono
+     l'immagine e il bottone ELIMINA con href preferiti.php?l=…a=del — non
+     matchare quelli!); indirizzo/orari = segmenti del link separati da `<br>`
+     (il `<b>` sta dentro un `<span class="uk-text-primary">`; usare
+     textContent dei nodi, filtrando il titolo). Ritorna [{codice, titolo,
+     indirizzo, quando, url}]. Testato con il file reale dell'utente: 26/26.
+- **`applicaImport(estrazione)`**: match per titolo normalizzato
+  (`normalizzaTitolo`: NFD, niente diacritici, uppercase, ’→', non-alnum→spazio).
+  Match → aggiorna when/address (se diversi) + url. Non matchato → NUOVO
+  luogo {id: "ohn-"+codice, …} geocodificato via **Nominatim**
+  (`geocodifica()`: 2 varianti «X, Napoli» / «X, Napoli, Italia»,
+  countrycodes=it, pausa 1100 ms; se non trovato: nel pannello verifica con
+  «⚠ senza coordinate», posizionabile a mano cliccando la mappa). Ritorna
+  {aggiornati, aggiunti, senzaCoord, messaggi}. NB: una tappa cancellata con
+  la ✕ e reimportata TORNA con un nuovo id (ohn-<codice>) e senza miniatura —
+  comportamento accettato. Testato: 2 località nuove geocodificate,
+  3 orari/indirizzi aggiornati, ✕+reimport → tappa ripristinata.
+- **Trasferimento PC ↔ mobile**: «⬇ Esporta stato» (esportaStatoBtn) scarica
+  `mytour-stato-<data>.json` = {versione:1, esportato, datiImportati,
+  correzioni, scelte:{ven,sab,dom:[id…]}}; «⬆ Importa stato»
+  (importaStatoBtn → importaStatoInput) valida il JSON, chiede conferma,
+  riscrive i TRE storage (importati, correzioni, scelte) e ricarica la pagina.
+- **UI/JS aggiuntivi**: #importBox/#importMsg (riepilogo o errore, classe
+  `import-msg errore` in rosso), `mostraImportMsg()`, `riepilogoImport()`
+  (ricostruisce marker/verifica/lista dopo l'import), `scaricaJSON()`.
+  Vecchio export «⬇ Esporta dati verificati (JSON)» (luoghi-verificati.json)
+  resta com'era. Guardie per i luoghi senza coordinate: input lat/lon vuoti
+  con placeholder, niente pulsante «centra» (e il click handler ha guardia
+  null); la card verifica nasconde l'immagine se `image` manca (onerror).
+- **Testato in locale** (server 8123, browser preview): import file 26 luoghi
+  (2 nuovi: 480 SITE SPECIFIC l=490 geocodificato; ARCICONFRATERNITA DELLA
+  DISCIPLINA DELLA SANTA CROCE l=502 senza coordinate — via corta non trovata
+  da Nominatim), ✕ persistente dopo reload, reimport ripristina,
+  esporta/importa stato OK, messaggio CORS su «Importa dal sito» da locale.
+  NOTA: import con MOLTI luoghi nuovi = 1 richiesta Nominatim a ~1,1 s per
+  luogo (26 luoghi ≈ 30 s): il messaggio in importBox avvisa.
 
 ## Fonte dati e OCR (come sono stati ricavati i dati)
 

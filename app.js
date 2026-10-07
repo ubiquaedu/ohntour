@@ -1,7 +1,9 @@
-// App «My OHN Tour» — mappa OpenStreetMap dei luoghi estratti via OCR da mytour.png.
-// Nessuna funzione di eliminazione: la lista è di sola consultazione, con ricerca,
-// verifica OCR, filtro per giornata, tour personale con avvisi di conflitto
-// orario a livello di giornata e link «Apri in Google Maps» nel popup.
+// App «My OHN Tour» — mappa OpenStreetMap dei luoghi di Open House Napoli.
+// Fonte primaria dei dati = IMPORT (fetch di preferiti.php dal sito OHN con le
+// tue credenziali, o file HTML «My tour» salvato): ha priorità su data.js e può
+// aggiornare orari, ripristinare tappe cancellate e aggiungere località nuove
+// (geocodificate via Nominatim). La ✕ cancella NEI DATI (validi per tutti i
+// dispositivi, replicabili con Esporta/Importa stato); data.js è il seed iniziale.
 import { luoghi } from "./data.js";
 
 const mapEl = document.getElementById("map");
@@ -23,14 +25,23 @@ const verificaPanel = document.getElementById("verificaPanel");
 const verificaList = document.getElementById("verificaList");
 const chiudiVerifica = document.getElementById("chiudiVerifica");
 const exportBtn = document.getElementById("exportBtn");
+const importSitoBtn = document.getElementById("importSitoBtn");
+const importFileBtn = document.getElementById("importFileBtn");
+const importFileInput = document.getElementById("importFileInput");
+const importBox = document.getElementById("importBox");
+const importMsg = document.getElementById("importMsg");
+const esportaStatoBtn = document.getElementById("esportaStatoBtn");
+const importaStatoBtn = document.getElementById("importaStatoBtn");
+const importaStatoInput = document.getElementById("importaStatoInput");
 const ripristinaBtn = document.getElementById("ripristinaBtn");
 const adminPassEl = document.getElementById("adminPass");
 
 const STORAGE_KEY = "mytour-mappa-correzioni-v1";
 const STORAGE_SCELTE = "mytour-scelte-per-giorno-v1";
-// Tappe eliminate con la ✕: elenco di id, salvato nel browser (PER DISPOSITIVO,
-// richiesta esplicita: la cancellazione è locale, non modifica data.js sul sito).
-const STORAGE_ELIMINATE = "mytour-tappe-eliminate-v1";
+// Dati importati (da preferiti.php o file HTML): fonte primaria con priorità su
+// data.js. La ✕ cancella da QUI, quindi la cancellazione vale su tutti i
+// dispositivi (o si replica con Esporta/Importa stato).
+const STORAGE_IMPORTATI = "mytour-dati-importati-v1";
 // etichette dei giorni per i contatori («★ sabato: N»)
 const ETICHETTA_GIORNO = { ven: "venerdì", sab: "sabato", dom: "domenica" };
 const NAPOLI = [40.849, 14.25];
@@ -78,25 +89,33 @@ let correzioni = caricaCorrezioni(); // { id: { title?, address?, when?, lat?, l
 // conflitti di sabato neanche), a meno di metterla anche per domenica.
 let scelte = caricaScelte(); // { ven: Set, sab: Set, dom: Set } di id
 let giornoFiltro = ""; // "", "ven", "sab", "dom" — non persistito: all'avvio sempre «Tutti»
-// tappe cancellate con la ✕ in questo browser: non compaiono più in lista,
-// mappa, conflitti e contatori finché non vengono ripristinate (pannello verifica).
-let eliminate = caricaEliminate(); // Set di id
+// dati importati da preferiti.php o file HTML: se esistono SOSTITUISCONO data.js
+// (fonte primaria, richiesta esplicita). La ✕ rimuove da qui: la cancellazione
+// vale per tutti i dispositivi (o si replica con Esporta/Importa stato).
+let datiImportati = caricaImportati(); // array di luoghi op null (= usa data.js)
 const markerPerId = new Map();
 
 // ---------- cache di calcolo ----------
 // datiCorrenti() viene chiamata centinaia di volte per interazione (card,
 // marker, popup, contatori): costruire l'array ogni volta era spreco. La
-// cache si invalida in salvaCorrezioni(), unico punto che cambia «correzioni».
+// cache si invalida in salvaCorrezioni() e salvaImportati() (i punti che
+// cambiano dati o coordinate).
 let cacheDati = null;
 const cacheOrari = new Map(); // testo «when» → fasce parseate
 const cacheDistanze = new Map(); // coppia di id → metri (haversine)
 
 function datiCorrenti() {
   if (!cacheDati)
-    cacheDati = luoghi
+    cacheDati = luoghiBase()
       .map((l) => ({ ...l, ...(correzioni[l.id] ?? {}) }))
-      .filter((l) => !eliminate.has(l.id)); // ✕: fuori da lista, mappa e conflitti
+      .filter((l) => l.lat != null && l.lon != null); // senza coordinate: in lista, non in mappa
   return cacheDati;
+}
+
+// Stessa cosa ma senza filtro: serve al pannello verifica (la card di un luogo
+// senza coordinate resta editabile, per posizionarlo a mano dalla mappa).
+function datiCompleti() {
+  return luoghiBase().map((l) => ({ ...l, ...(correzioni[l.id] ?? {}) }));
 }
 
 function caricaCorrezioni() {
@@ -126,28 +145,171 @@ function caricaScelte() {
   }
 }
 
-// Tutti i luoghi ORIGINALI (eliminate comprese): serve al pannello di verifica
-// per far vedere e ripristinare le tappe cancellate con la ✕.
-function datiCompleti() {
-  return luoghi.map((l) => ({ ...l, ...(correzioni[l.id] ?? {}) }));
+// ---------- dati base (importato > data.js) ----------
+
+// Dati risultanti dall'ultimo import (preferiti.php o file HTML): fonte primaria,
+// ha priorità su data.js. Se non c'è nessun import si usa data.js (seed).
+function luoghiBase() {
+  return datiImportati ?? luoghi;
 }
 
-function caricaEliminate() {
+function caricaImportati() {
   try {
-    return new Set(JSON.parse(localStorage.getItem(STORAGE_ELIMINATE)) ?? []);
+    const dati = JSON.parse(localStorage.getItem(STORAGE_IMPORTATI));
+    return Array.isArray(dati) && dati.length ? dati : null;
   } catch {
-    return new Set();
+    return null;
   }
 }
 
-function salvaEliminate() {
-  localStorage.setItem(STORAGE_ELIMINATE, JSON.stringify([...eliminate]));
+function salvaImportati() {
+  localStorage.setItem(STORAGE_IMPORTATI, JSON.stringify(datiImportati));
+  cacheDati = null;
+  cacheOrari.clear();   // orari aggiornati dalla fonte
+  cacheDistanze.clear(); // possono essere cambiate anche le coordinate
 }
 
 function salvaScelte() {
   const dati = {};
   for (const [g, ins] of Object.entries(scelte)) dati[g] = [...ins];
   localStorage.setItem(STORAGE_SCELTE, JSON.stringify(dati));
+}
+
+// ---------- IMPORT: fonte primaria dei dati ----------
+// Due strade che convergono su applicaImport():
+//  - «🌐 Importa dal sito»: fetch di preferiti.php (funziona solo nel browser
+//    in cui si è fatto l'accesso a Open House; se il sito blocca il CORS si
+//    segnala e resta l'altra via);
+//  - «📄 Importa HTML»: il file «My tour» salvato come HTML.
+// L'import ha PRIORITÀ sui dati interni: aggiorna orari/indirizzi, ripristina
+// le tappe cancellate per errore e aggiunge le località nuove (geocodificate).
+
+const PREF_DIRETTI = "https://www.openhousenapoli.org/location/preferiti.php";
+
+// normalizzazione per il match: maiuscole, niente accenti/punteggiatura
+// (stessa strategia di _strumenti/importa_preferiti.py)
+function normalizzaTitolo(t) {
+  return (t ?? "")
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toUpperCase()
+    .replace(/\u2019/g, "'")
+    .replace(/[^A-Z0-9]+/g, " ")
+    .trim();
+}
+
+// Estrae i luoghi dall'HTML della pagina «My tour» (stessa struttura letta da
+// importa_preferiti.py: righe <tr> con <b>titolo</b>, indirizzo, orari e link
+// alla scheda con codice l=<n>). Ritorna [] se il file non è riconosciuto.
+function estraiLuoghiDaHTML(testo) {
+  const doc = new DOMParser().parseFromString(testo, "text/html");
+  const luoghi_ = [];
+  for (const tr of doc.querySelectorAll("tr")) {
+    const titolo = tr.querySelector("b");
+    if (!titolo) continue;
+    // il link con i dati è quello che CONTIENE il <b> (gli altri link della
+    // riga sono l'immagine e il bottone ELIMINA, che ha href preferiti.php?l=)
+    const link = [...tr.querySelectorAll('a[href*="location.php?l="]')].find((a) => a.contains(titolo));
+    if (!link) continue;
+    const codice = (link.getAttribute("href").match(/l=(\d+)/) ?? [])[1];
+    if (!codice) continue;
+    // indirizzo e orari: i segmenti del link dopo il <b>, separati da <br>
+    let indirizzo = "";
+    let quando = "";
+    {
+      // segmenti del link: i nodi testo e gli elementi contribuiscono il loro
+      // testo, i <br> separano i segmenti (indirizzo / orari)
+      const segmenti = [];
+      let corrente = "";
+      for (const n of link.childNodes) {
+        if (n.nodeType === 3) corrente += n.textContent;
+        else if (/^br$/i.test(n.tagName)) { segmenti.push(corrente); corrente = ""; }
+        else corrente += n.textContent;
+      }
+      segmenti.push(corrente);
+      const nodi = segmenti.map((s) => s.trim()).filter((s) => s && s !== titolo.textContent.trim());
+      indirizzo = nodi[0] ?? "";
+      quando = nodi.slice(1).join(" | ");
+    }
+    luoghi_.push({
+      codice,
+      titolo: titolo.textContent.trim(),
+      indirizzo,
+      quando,
+      url: "https://www.openhousenapoli.org/location/location.php?l=" + codice,
+    });
+  }
+  return luoghi_;
+}
+
+// Geocodifica UN luogo via Nominatim (stessa strategia di geocode.py:
+// countrycodes=it, varianti di ripiego). 1 richiesta/secondo rispettata dal
+// chiamante (await tra un luogo e l'altro). Ritorna {lat, lon} o null.
+async function geocodifica(indirizzo) {
+  const pulito = (indirizzo ?? "").replace(/\s+/g, " ").trim();
+  if (!pulito) return null;
+  const varianti = [pulito + ", Napoli", pulito + ", Napoli, Italia"];
+  for (const v of varianti) {
+    const url =
+      "https://nominatim.openstreetmap.org/search?format=jsonv2&limit=1&countrycodes=it&q=" +
+      encodeURIComponent(v);
+    try {
+      const r = await fetch(url, { headers: { Accept: "application/json" } });
+      if (r.ok) {
+        const arr = await r.json();
+        if (arr.length) return { lat: parseFloat(arr[0].lat), lon: parseFloat(arr[0].lon) };
+      }
+    } catch { /* riprova con la variante successiva */ }
+    await new Promise((res) => setTimeout(res, 1100)); // pausa Nominatim
+  }
+  return null;
+}
+
+// Applica l'import ai dati base: aggiorna orari/indirizzi dalla fonte, ripristina
+// le tappe cancellate presenti, aggiunge i luoghi nuovi (geocodificati se
+// possibile). Ritorna il riepilogo testuale ({aggiornati, ripristinati, aggiunti,
+// senzaCoord, messaggi: []}).
+async function applicaImport(estrazione) {
+  if (!datiImportati) datiImportati = luoghi.map((l) => ({ ...l }));
+  const base = datiImportati;
+  const indice = new Map(base.map((l, i) => [normalizzaTitolo(l.title), i]));
+  const aggiornati = [];
+  const aggiunti = [];
+  const senzaCoord = [];
+  for (const p of estrazione) {
+    const i = indice.get(normalizzaTitolo(p.titolo));
+    if (i !== undefined) {
+      const l = base[i];
+      if (p.quando && p.quando !== l.when) { l.when = p.quando; aggiornati.push(p.titolo); }
+      if (p.indirizzo && p.indirizzo !== l.address) { l.address = p.indirizzo; if (!aggiornati.includes(p.titolo)) aggiornati.push(p.titolo); }
+      if (l.url && p.url && l.url !== p.url) l.url = p.url;
+    } else {
+      // luogo nuovo: geocodifica (1,1 s di pausa è dentro geocodifica)
+      const coord = await geocodifica(p.indirizzo);
+      const nuovo = {
+        id: "ohn-" + p.codice,
+        title: p.titolo,
+        address: p.indirizzo,
+        when: p.quando,
+        url: p.url,
+        ...(coord ?? {}),
+      };
+      base.push(nuovo);
+      indice.set(normalizzaTitolo(p.titolo), base.length - 1);
+      if (coord) aggiunti.push(p.titolo);
+      else { senzaCoord.push(p.titolo); aggiunti.push(p.titolo); }
+      // NB: una tappa cancellata per errore e poi reimportata torna con un
+      // nuovo id (ohn-<codice>) e senza miniatura: i dati (orari, indirizzo,
+      // url) tornano dalla fonte.
+    }
+  }
+  const messaggi = [];
+  if (aggiornati.length) messaggi.push("Orari/indirizzi aggiornati: " + aggiornati.join(", "));
+  if (aggiunti.length) messaggi.push("Località aggiunte: " + aggiunti.join(", "));
+  if (senzaCoord.length) messaggi.push("⚠ Coordinate non trovate (posizionabile a mano dal pannello): " + senzaCoord.join(", "));
+  if (!messaggi.length) messaggi.push("Nessuna differenza: i dati sono già allineati alla fonte.");
+  salvaImportati();
+  return { aggiornati, aggiunti, senzaCoord, messaggi };
 }
 
 // stelle della giornata selezionata (Set vuoto in «Tutti», dove non si scelgono)
@@ -676,23 +838,27 @@ function toggleScelta(id) {
   aggiornaColoriMarker();
 }
 
-// «✕» accanto al segnalibro: CANCELLA la tappa dalla lista di questo browser
-// (richiesta esplicita: scompare da lista, mappa, conflitti e contatori; le
-// scelte/giorni vengono ripulite). Il salvataggio è LOCALE (localStorage, per
-// dispositivo): data.js e il sito pubblicato non cambiano. Ripristino dal
-// pannello di verifica (?verifica=1). Il tasto esiste solo dopo lo sblocco
-// con password; qui si riverifica in caso di richiamo programmatico.
+// «✕» accanto al segnalibro: CANCELLA la tappa NEI DATI (richiesta
+// esplicita: vale per tutti i dispositivi, non solo questo browser). La
+// rimozione si applica ai dati base (importati se esistono, altrimenti si crea
+// lo storage importati da data.js) e le scelte del tour vengono ripulite.
+// Ripristino con l'import (fonte primaria) o da pannello verifica.
+// Il tasto esiste solo dopo lo sblocco con password; qui si riverifica in caso
+// di richiamo programmatico.
 function eliminaTappa(id) {
   if (!adminSbloccato) return;
   const luogo = datiCompleti().find((l) => l.id === id);
-  if (!luogo || eliminate.has(id)) return;
-  if (!confirm(`Cancellare «${campo(luogo, "title")}» dalla lista di questo browser?
-Sarà ripristinabile solo dal pannello di verifica (?verifica=1).`)) return;
-  eliminate.add(id);
-  salvaEliminate();
+  if (!luogo) return;
+  if (!confirm(`Cancellare «${campo(luogo, "title")}» dai dati del tour?
+La cancellazione vale per tutti i dispositivi; si può ripristinare con l'import
+(file HTML o preferiti.php) o dal pannello di verifica.`)) return;
+  // nel caso in cui non ci sia ancora un import: si parte da data.js
+  if (!datiImportati) datiImportati = luoghi.map((l) => ({ ...l }));
+  const idx = datiImportati.findIndex((l) => l.id === id);
+  if (idx >= 0) datiImportati.splice(idx, 1);
+  salvaImportati();
   for (const ins of Object.values(scelte)) ins.delete(id); // pulizia scelte
   salvaScelte();
-  cacheDati = null;
   // il marker va rimosso dalla mappa (datiCorrenti non lo contiene più)
   const marker = markerPerId.get(id);
   if (marker) { map.removeLayer(marker); markerPerId.delete(id); }
@@ -879,15 +1045,16 @@ function rigaCampo(luogo, chiave) {
 
 function rigaCoordinate(luogo) {
   const sospetto = luogo.needsReview?.includes("coordinates");
+  const senzaCoord = luogo.lat == null || luogo.lon == null;
   const nota = NOTE_COORDINATE[luogo.id] ?? "";
   return `<label>Coordinate</label>
     <div class="coord-riga">
-      <input type="number" step="0.00001" data-campo="lat" value="${luogo.lat}"
-        class="${sospetto ? "da-vedere" : ""}" aria-label="Latitudine" />
-      <input type="number" step="0.00001" data-campo="lon" value="${luogo.lon}"
-        class="${sospetto ? "da-vedere" : ""}" aria-label="Longitudine" />
-      <span class="coord-note">${nota}${nota ? " — " : ""}clicca la mappa per spostare il punto</span>
-      <button class="vai-btn" type="button" data-centra="${luogo.id}">centra</button>
+      <input type="number" step="0.00001" data-campo="lat" value="${luogo.lat ?? ""}"
+        class="${sospetto ? "da-vedere" : ""}" aria-label="Latitudine" placeholder="lat" />
+      <input type="number" step="0.00001" data-campo="lon" value="${luogo.lon ?? ""}"
+        class="${sospetto ? "da-vedere" : ""}" aria-label="Longitudine" placeholder="lon" />
+      <span class="coord-note">${senzaCoord ? "⚠ senza coordinate — ": ""}${nota}${nota ? " — " : ""}clicca la mappa per spostare il punto</span>
+      ${senzaCoord ? "" : `<button class="vai-btn" type="button" data-centra="${luogo.id}">centra</button>`}
     </div>`;
 }
 
@@ -898,7 +1065,7 @@ function creaCardVerifica(luogo) {
   const confermato = Boolean(correzioni[luogo.id]?.confermato);
   card.innerHTML = `
     <div class="vc-head">
-      <img src="${luogo.image}" alt="" loading="lazy" />
+      <img src="${luogo.image ?? ""}" alt="" loading="lazy" onerror="this.style.visibility='hidden'" />
       <span class="vc-titolo"></span>
       <label class="vc-ok"><input type="checkbox" data-confermato ${confermato ? "checked" : ""} /> confermo</label>
     </div>
@@ -922,11 +1089,15 @@ function creaCardVerifica(luogo) {
     salvaCorrezioni();
     aggiornaBadgeVerifica();
   });
-  card.querySelector("[data-centra]").addEventListener("click", () => {
-    const l = datiCorrenti().find((x) => x.id === luogo.id);
-    map.setView([l.lat, l.lon], 17);
-    markerPerId.get(luogo.id)?.openPopup();
-  });
+  const btnCentra = card.querySelector("[data-centra]");
+  if (btnCentra) {
+    btnCentra.addEventListener("click", () => {
+      const l = datiCompleti().find((x) => x.id === luogo.id);
+      if (!l || l.lat == null || l.lon == null) return; // guardia: senza coordinate non centra
+      map.setView([l.lat, l.lon], 17);
+      markerPerId.get(luogo.id)?.openPopup();
+    });
+  }
   return card;
 }
 
@@ -978,6 +1149,7 @@ map.on("click", (e) => {
   if (!id) return;
   correzioni[id] = { ...(correzioni[id] ?? {}), lat: e.latlng.lat, lon: e.latlng.lng };
   salvaCorrezioni();
+  ricostruisciMarker(); // il luogo può non avere ancora un marker (nuovo import senza coordinate)
   aggiornaTutto();
   renderVerifica();
 });
@@ -995,14 +1167,147 @@ exportBtn.addEventListener("click", () => {
 });
 
 ripristinaBtn.addEventListener("click", () => {
-  if (!confirm("Ripristinare i dati originali dell'OCR? Verranno eliminate anche le correzioni e le tappe cancellate con la ✕ in questo browser.")) return;
+  if (!confirm("Tornare ai DATI BASE attuali (import compreso)? Verranno eliminate le correzioni fatte nel pannello di verifica.")) return;
   correzioni = {};
-  eliminate = new Set();
-  salvaEliminate();
   salvaCorrezioni();
   ricostruisciMarker();
   renderVerifica();
   aggiornaTutto();
+});
+
+// ---------- import: fonte primaria dei dati ----------
+// Due strade che convergono su applicaImport():
+//  - «🌐 Importa dal sito»: fetch dei preferiti direttamente da
+//    openhousenapoli.org (funziona solo se il browser è già autenticato lì;
+//    da Cloudflare Pages la risposta del sito non porta header CORS → messaggio
+//    di errore chiaro, usare «📄 Importa HTML»).
+//  - «📄 Importa HTML»: il file «My tour» salvato come HTML dal browser.
+// Risultato: aggiorna orari/indirizzi, ripristina tappe cancellate per errore,
+// aggiunge località nuove (geocodificate via Nominatim).
+
+function mostraImportMsg(testo, tipo = "ok") {
+  importBox.hidden = false;
+  importMsg.className = tipo === "err" ? "import-msg errore" : "import-msg";
+  importMsg.textContent = testo;
+}
+
+function riepilogoImport(res) {
+  mostraImportMsg(res.messaggi.join("\n"));
+  ricostruisciMarker();
+  renderVerifica();
+  aggiornaTutto();
+}
+
+importSitoBtn.addEventListener("click", async () => {
+  importSitoBtn.disabled = true;
+  mostraImportMsg("Scarico i preferiti da openhousenapoli.org…");
+  try {
+    const r = await fetch(PREF_DIRETTI, { credentials: "include" });
+    if (!r.ok) throw new Error("HTTP " + r.status);
+    const testo = await r.text();
+    const estrazione = estraiLuoghiDaHTML(testo);
+    if (!estrazione.length) {
+      mostraImportMsg(
+        "La pagina scaricata non contiene luoghi: probabilmente non sei autenticato su openhousenapoli.org in questa finestra (nessun «My tour» con preferiti). Prova con «📄 Importa HTML».",
+        "err"
+      );
+      return;
+    }
+    riepilogoImport(await applicaImport(estrazione));
+  } catch (e) {
+    mostraImportMsg(
+      "Impossibile leggere i preferiti dal sito (" +
+        (e.name === "TypeError"
+          ? "richiesta bloccata: openhousenapoli.org non consente richieste da questo dominio (CORS)"
+          : e.message) +
+        "). Usa «📄 Importa HTML» con il file «My tour» salvato dal browser.",
+      "err"
+    );
+  } finally {
+    importSitoBtn.disabled = false;
+  }
+});
+
+importFileBtn.addEventListener("click", () => importFileInput.click());
+
+importFileInput.addEventListener("change", async () => {
+  const file = importFileInput.files?.[0];
+  if (!file) return;
+  importFileInput.value = ""; // reimport dello stesso file: ricarica l'evento
+  const testo = await file.text();
+  const estrazione = estraiLuoghiDaHTML(testo);
+  if (!estrazione.length) {
+    mostraImportMsg(
+      "Nessun luogo riconosciuto nel file: deve essere la pagina «My tour» di openhousenapoli.org salvata come HTML.",
+      "err"
+    );
+    return;
+  }
+  if (
+    !confirm(
+      "Importare " + estrazione.length + " località dal file «" + file.name + "»?\n\n" +
+        "- orari e indirizzi vengono allineati alla fonte\n" +
+        "- le località nuove vengono geocodificate (1 richiesta/secondo)\n" +
+        "- le tappe cancellate per errore tornano nell'elenco"
+    )
+  )
+    return;
+  mostraImportMsg("Import in corso (geocodifica dei luoghi nuovi: fino a ~2 s ciascuno)…");
+  try {
+    riepilogoImport(await applicaImport(estrazione));
+  } catch (e) {
+    mostraImportMsg("Errore durante l'import: " + e.message, "err");
+  }
+});
+
+// trasferimento stato PC ↔ mobile: esporta dati importati + correzioni + scelte
+function scaricaJSON(nome, oggetto) {
+  const blob = new Blob([JSON.stringify(oggetto, null, 2)], { type: "application/json" });
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(blob);
+  a.download = nome;
+  a.click();
+  URL.revokeObjectURL(a.href);
+}
+
+esportaStatoBtn.addEventListener("click", () => {
+  const data = new Date().toISOString().slice(0, 10);
+  scaricaJSON("mytour-stato-" + data + ".json", {
+    versione: 1,
+    esportato: new Date().toISOString(),
+    datiImportati,
+    correzioni,
+    scelte: Object.fromEntries(Object.entries(scelte).map(([g, ins]) => [g, [...ins]])),
+  });
+});
+
+importaStatoBtn.addEventListener("click", () => importaStatoInput.click());
+
+importaStatoInput.addEventListener("change", async () => {
+  const file = importaStatoInput.files?.[0];
+  if (!file) return;
+  importaStatoInput.value = "";
+  let stato;
+  try {
+    stato = JSON.parse(await file.text());
+  } catch {
+    alert("File non leggibile: deve essere un JSON esportato con «⬇ Esporta stato».");
+    return;
+  }
+  if (!stato || typeof stato !== "object" || (stato.datiImportati && !Array.isArray(stato.datiImportati))) {
+    alert("Struttura non riconosciuta: deve essere un JSON esportato con «⬇ Esporta stato».");
+    return;
+  }
+  if (!confirm("Sostituire i dati locali (dati importati, correzioni e scelte) con quelli del file «" + file.name + "»?"))
+    return;
+  localStorage.setItem(STORAGE_IMPORTATI, JSON.stringify(stato.datiImportati ?? []));
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(stato.correzioni ?? {}));
+  const scelteArr = stato.scelte ?? {};
+  localStorage.setItem(
+    STORAGE_SCELTE,
+    JSON.stringify(Object.fromEntries(Object.entries(scelteArr).map(([g, arr]) => [g, arr])))
+  );
+  location.reload();
 });
 
 // marker cliccabile = selezione per lo spostamento via mappa

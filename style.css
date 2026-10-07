@@ -264,6 +264,16 @@ body {
 .verifica-actions { display: flex; gap: 8px; flex-wrap: wrap; }
 .verifica-nota { color: var(--muted); font-size: 13px; line-height: 1.5; max-width: 900px; }
 
+/* esito dell'import (dal sito o da file HTML): riepilogo o errore */
+.import-box {
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: rgba(0, 0, 0, 0.22);
+  padding: 10px 14px;
+}
+.import-msg { margin: 0; font-size: 13px; line-height: 1.5; white-space: pre-line; }
+.import-msg.errore { color: #ff9d9d; }
+
 .verifica-card {
   border: 1px solid var(--border);
   border-radius: 12px;
