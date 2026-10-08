@@ -337,13 +337,25 @@
 
 - `?vai=<id>` → deep link: centra il punto e apre il popup
   (es. `?vai=16-i-non-luoghi-porto`).
-- `?verifica=1` → ricrea il pulsante «🔍 Verifica OCR» in alto e apre il
-  pannello. IL PULSANTE NON È NELL'INTERFACCIA PUBBLICA (richiesta esplicita:
-  il sito viene condiviso con un amico); è una riservatezza leggera.
-- Combinabili: `?verifica=1&vai=<id>`.
-- Il contatore «✓ verificato» in barra è visibile SOLO con `?verifica=1`
-  (nascosto nella vista pubblica, richiesta esplicita: il sito viene condiviso
-  con un amico).
+- **Pannello impostazioni** (ex «Verifica OCR», 07/10 su richiesta utente:
+  «togli tutti i riferimenti all'OCR, metti un pulsante che appaia dopo la
+  password»):
+  - titolo e pulsante ora sono «⚙ Impostazioni»; ogni riferimento OCR
+    (`needsReview`, badge «da verificare», «✓ verificato», campi gialli
+    `da-vedere`, `.badge-review`) è STATO RIMOSSO da app.js/index.html/style.css
+    (i `needsReview` non erano più in data.js da fine verifica; rimasti solo
+    come gestione codice, ora eliminata).
+  - **Due accessi**: (1) link `?impostazioni=1` (il vecchio `?verifica=1`
+    resta compatibile, `accessoImpostazioni` accetta entrambi); (2) dopo lo
+    sblocco con password («26») nel campo 🔒 compare il pulsante «⚙
+    Impostazioni» in `.topbar-actions` (`creaBtnImpostazioni()` dentro
+    `aggiornaStatoAdmin()`; ribloccando il pulsante viene RIMOSSO).
+  - Il contatore in barra ora mostra «⚠ N senza coordinate» SOLO se esistono
+    luoghi importati senza lat/lon (niente più «✓ verificato»).
+  - Card verifica «sospetta» = luogo SENZA COORDINATE (bordo arancio, era il
+    giallo OCR). Testato nel browser: sblocco→⚙→pannello→import 2 luoghi
+    (1 geocodificato, 1 senza coordinate + contatore ⚠ 1)→riblocco→⚙ via.
+- Combinabili: `?impostazioni=1&vai=<id>`.
 
 ## Struttura (i file dell'app sono nella RADICE di ohn)
 
@@ -352,7 +364,7 @@
   radice di `D:\coding\ohn` e la cartella eliminata. I link interni sono
   relativi e non hanno richiesto modifiche.
 - `index.html`, `style.css`, `app.js`, `data.js`, `assets/` (30 jpg) = sito.
-- `mytour.png` = sorgente OCR (non richiesta dal sito, può essere omessa dal deploy).
+- `mytour.png` = sorgente OCR storica (non richiesta dal sito, può essere omessa dal deploy).
 - `_strumenti/` = geocode.py, confronta_export.py, risultati.json (build, non pubblicabili ma innocue).
 - `README.md` = avvio locale, funzioni, deploy Cloudflare, esito verifica.
 

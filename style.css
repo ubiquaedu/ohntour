@@ -161,15 +161,6 @@ body {
 .card-when { font-size: 12px; margin: 0; line-height: 1.35; }
 
 .card-side { flex: 0 0 auto; display: flex; flex-direction: column; align-items: flex-end; gap: 8px; }
-.badge-review {
-  background: var(--giallo);
-  color: #4a3a06;
-  font-size: 10px;
-  font-weight: 800;
-  border-radius: 999px;
-  padding: 3px 8px;
-  white-space: nowrap;
-}
 
 /* ---------- popup ---------- */
 .popup-body { max-width: 260px; }
@@ -282,7 +273,7 @@ body {
   margin-bottom: 12px;
   max-width: 980px;
 }
-.verifica-card.sospetta { border-color: rgba(255, 224, 138, 0.55); }
+.verifica-card.sospetta { border-color: rgba(255, 165, 90, 0.6); } /* luogo senza coordinate */
 
 .vc-head { display: flex; gap: 10px; align-items: center; margin-bottom: 10px; flex-wrap: wrap; }
 .vc-head img {
@@ -308,7 +299,6 @@ body {
   font-size: 13px;
   resize: vertical;
 }
-.vc-grid textarea.da-vedere { background: rgba(255, 224, 138, 0.14); border-color: rgba(255, 224, 138, 0.6); }
 .coord-riga { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
 .coord-riga input {
   width: 130px;
@@ -320,7 +310,6 @@ body {
   font: inherit;
   font-size: 13px;
 }
-.coord-riga input.da-vedere { background: rgba(255, 224, 138, 0.14); border-color: rgba(255, 224, 138, 0.6); }
 .coord-note { color: var(--muted); font-size: 11.5px; flex: 1 1 200px; }
 
 .verifica-vuoto { color: var(--muted); font-size: 13px; }

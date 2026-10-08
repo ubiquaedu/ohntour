@@ -1,8 +1,10 @@
 # My OHN Tour — Mappa personalizzata per Open House Napoli
 
 Mini app web statica: **mappa OpenStreetMap** (Leaflet) con i luoghi
- dell'itinerario «My OHN Tour», estratti via OCR da `mytour.png` e **verificati
- in pagina** (pannello Verifica OCR, tutti i punti confermati). L'app non
+ dell'itinerario «My OHN Tour» (prima edizione: estratti via OCR da
+ `mytour.png`, poi verificati in pagina). **Oggi i dati sono gestiti
+ dall'IMPORT** (dal sito Open House o da file HTML — vedi «Pannello ⚙
+ Impostazioni»). L'app non
  contiene riferimenti all'edizione: luoghi, date, orari e numero delle
  destinazioni cambiano a ogni edizione e vivono solo in `data.js`.
 
@@ -15,10 +17,10 @@ sorgente `mytour.png`):
 ohn/
 ├── index.html          # pagina: ricerca + mappa + lista + pannello verifica
 ├── style.css           # stile (dark, responsive fino a smartphone)
-├── app.js              # logica: mappa, lista, popup, filtro giornata, tour, verifica OCR
+├── app.js              # logica: mappa, lista, popup, filtro giornata, tour, import, impostazioni
 ├── data.js             # i luoghi: titolo, indirizzo, orari, coordinate
 ├── assets/             # miniature ritagliate da mytour.png
-├── mytour.png          # immagine sorgente dell'OCR (non richiesta dal sito)
+├── mytour.png          # immagine sorgente storica (OCR); NON richiesta dal sito
 └── _strumenti/         # utility di build (non pubblicate, innocue se caricate)
     ├── geocode.py      # geocodifica Nominatim degli indirizzi
     └── risultati.json  # esiti del geocoding
@@ -109,20 +111,28 @@ poi apri http://localhost:8123/ — oppure con l'estensione Live Server di VS Co
 - Orari e fasce per il filtro e i conflitti derivano dal campo `when` di
   `data.js` (con giorno ereditato dalle fasce successive, deduplica e
   tolleranza ai testi non interpretabili, che restano sempre visibili).
-- **Pannello «🔍 Verifica OCR»**: strumento di verifica usato in fase di build
-  (tutti i punti confermati). NON è nell'interfaccia pubblica: si accede
-  solo con il link **`?verifica=1`** (es. `https://myohntour.pages.dev/?verifica=1`),
-  che ricrea il pulsante in alto e apre il pannello; le modifiche fatte lì
-  restano nel browser (`localStorage`) e si applicano a mappa, lista e popup.
-  Anche il contatore «✓ verificato» in barra appare solo in questa vista
-  riservata, non nel sito pubblico.
-- **Esporta dati verificati (JSON)**: produce il file con le correzioni da
-  ricopiare dentro `data.js` quando la verifica è conclusa.
-- **Ripristina originali**: riporta i dati OCR di partenza.
-- Nessuna funzione di eliminazione: la lista è di sola consultazione.
+- **Pannello «⚙ Impostazioni»** (import, correzioni, trasferimento stato):
+  NON è nell'interfaccia pubblica. Si accede in due modi:
+  1. con il link **`?impostazioni=1`** (es. `https://myohntour.pages.dev/?impostazioni=1`;
+     compatibile anche il vecchio `?verifica=1`), oppure
+  2. digitando la **password admin** nel campo 🔒 in alto: compare il pulsante
+     **⚙ Impostazioni** accanto al campo (e si abilita anche il tasto ✕ di
+     cancellazione nelle viste di giornata); cliccando di nuovo sul campo 🔒
+     tutto si riblocca e il pulsante sparisce.
+  Il pannello gestisce l'IMPORT (dal sito o da file HTML — fonte primaria dei
+  dati), le correzioni manuali a mappa/lista/popup (restano nel browser,
+  `localStorage`) e «⬇/⬆ Esporta/Importa stato» per trasferire dati+scelte
+  tra PC e mobile. Il contatore «⚠ N senza coordinate» appare solo se ci sono
+  luoghi importati da posizionare a mano.
+- **Esporta dati (JSON)**: produce il JSON di TUTTI i luoghi (dati base +
+  correzioni), comodo per fissare le correzioni in `data.js`.
+- **Ripristina originali**: azzera le correzioni fatte nel pannello (i dati
+  importati restano).
+- La cancellazione ✕ è riservata all'admin (password) e agisce NEI DATI:
+  ripristinabile con l'import.
 - Deep link per condividere un punto: `?vai=<id>`
   (es. `https://myohntour.pages.dev/?vai=16-i-non-luoghi-porto`).
-- Combinabili: `?verifica=1&vai=<id>` apre il pannello e poi centra il punto.
+- Combinabili: `?impostazioni=1&vai=<id>` apre il pannello e poi centra il punto.
 
 ## Pubblicazione su Cloudflare Pages
 
@@ -174,9 +184,11 @@ numero dei luoghi): i dati vivono solo in `data.js`. Per una nuova edizione:
    (es. «Ven 2 · Sab 3 · Dom 4»: i tasti restano gli stessi, cambia il testo);
 4. fai commit+push: il deploy su Cloudflare Pages parte da solo.
 
-## Verifica OCR — esito
+## Verifica dati iniziale (storia)
 
-Verifica completata in pagina dall'utente: **tutti i punti confermati** senza
-modifiche (export JSON del pannello confrontato con `data.js`: nessuna
-differenza). Il segnalatore di «I (NON) LUOGHI DEL PORTO» è stato posizionato
-a mano a fine via De Gasperi, incrocio con Piazza Municipio.
+I 30 luoghi della prima edizione sono stati ricavati via OCR da `mytour.png` e
+verificati in pagina dall'utente: **tutti i punti confermati** senza modifiche
+(export JSON del pannello confrontato con `data.js`: nessuna differenza). Il
+segnalatore di «I (NON) LUOGHI DEL PORTO» è stato posizionato a mano a fine
+via De Gasperi, incrocio con Piazza Municipio. Oggi la fonte primaria è
+l'IMPORT (vedi «Pannello ⚙ Impostazioni»); la verifica OCR è solo storia.

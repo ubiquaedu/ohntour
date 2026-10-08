@@ -20,7 +20,7 @@ const riepilogoConflittiEl = document.getElementById("riepilogoConflitti");
 const riepilogoTitoloEl = document.getElementById("riepilogoTitolo");
 const riepilogoListaEl = document.getElementById("riepilogoLista");
 const chiudiConflittiBtn = document.getElementById("chiudiConflitti");
-const verificaBtn = document.getElementById("verificaBtn");
+const verificaBtn = document.getElementById("verificaBtn"); // pulsante ⚙ creato dinamicamente (vedi sotto)
 const verificaPanel = document.getElementById("verificaPanel");
 const verificaList = document.getElementById("verificaList");
 const chiudiVerifica = document.getElementById("chiudiVerifica");
@@ -64,9 +64,9 @@ const NOME_PER_GIORNO = Object.fromEntries(
 // sotto questa soglia (o con sovrapposizione) la coppia è «in conflitto»
 const MARGINE_CONFLITTO_MIN = 30;
 // Password che abilita il tasto «✕» (rimozione dal tour di tutti i giorni):
-// protezione leggera, per lo stesso motivo del pannello ?verifica=1 — il sito
-// è condiviso con un amico e il tasto di cancellazione non deve sembrare
-// pubblico. NON persistita: al refresh si torna bloccati.
+// protezione leggera, per lo stesso motivo del pannello impostazioni — il sito
+// è condiviso con un amico e cancellazione/impostazioni non devono sembrare
+// pubbliche. NON persistita: al refresh si torna bloccati.
 const PASSWORD_ADMIN = "26";
 let adminSbloccato = false;
 
@@ -78,9 +78,12 @@ const NOTE_COORDINATE = {
   "28-santa-lucia-borgo": "piazza senza numero civico",
 };
 
-// Vista riservata: ?verifica=1 abilita il pannello OCR e il contatore di verifica.
-// La costante sta in testa perché serve anche ad aggiornaBadgeVerifica() all'avvio.
-const accessoVerifica = new URLSearchParams(location.search).has("verifica");
+// Vista riservata alla configurazione: ?impostazioni=1 apre direttamente il
+// pannello (import, correzioni, trasferimento stato). Compatibilità: anche
+// ?verifica=1 (storicamente) apre lo stesso pannello.
+const accessoImpostazioni =
+  new URLSearchParams(location.search).has("impostazioni") ||
+  new URLSearchParams(location.search).has("verifica");
 
 // ---------- stato ----------
 let correzioni = caricaCorrezioni(); // { id: { title?, address?, when?, lat?, lon?, confermato? } }
@@ -347,7 +350,7 @@ function parseOrari(testoWhen) {
       if (fine > inizio) fasce.push({ giorno: giornoCorrente, inizio, fine });
     }
   }
-  // deduplica: stessa giornata e stessi orari (caso MEA DOMUS nell'OCR originale)
+  // deduplica: stessa giornata e stessi orari (caso MEA DOMUS nei dati originali)
   const viste = new Set();
   const risultato = fasce.filter((f) => {
     const chiave = `${f.giorno}|${f.inizio}|${f.fine}`;
@@ -648,18 +651,15 @@ function cardHTML(luogo) {
   const thumb = luogo.image
     ? `<img src="${luogo.image}" alt="" loading="lazy" />`
     : "";
-  const badge = luogo.needsReview?.length
-    ? `<span class="badge-review" title="Campi da verificare: ${luogo.needsReview.join(", ")}">da verificare</span>`
-    : "";
   // La stella del tour si vede e si usa solo con una giornata selezionata e
   // vale per QUEL giorno; nella vista «Tutti» le card restano senza stella.
   const scelta = scelteDelGiorno().has(luogo.id);
   // «✕» accanto alla stella: presente nelle viste di giorno SOLO dopo lo
-  // sblocco con password (campo 🔒 in alto); funziona anche senza stella e
-  // cancella la tappa dalla lista di questo browser (ex «rimuove dal tour»)
+  // sblocco con password (campo 🔒 in alto) e cancella la tappa DAI DATI
+  // (vale per tutti i dispositivi; si ripristina con l'import)
   const del = giornoFiltro && adminSbloccato
     ? `<button class="del-btn" type="button" data-elimina="${luogo.id}"
-        title="Cancella la tappa dalla lista di questo browser (ripristinabile da ?verifica=1)">✕</button>`
+        title="Cancella la tappa DAI DATI (vale per tutti i dispositivi; si ripristina con l'import)">✕</button>`
     : "";
   const star = giornoFiltro
     ? `<button class="star-btn ${scelta ? "attiva" : ""}" type="button" data-scelta="${luogo.id}"
@@ -672,7 +672,6 @@ function cardHTML(luogo) {
       <p class="card-when"></p>
     </div>
     <div class="card-side">
-      ${badge}
       <button class="vai-btn" type="button" data-vai="${luogo.id}">📍 Vai</button>
       ${star}
       ${del}
@@ -842,16 +841,16 @@ function toggleScelta(id) {
 // esplicita: vale per tutti i dispositivi, non solo questo browser). La
 // rimozione si applica ai dati base (importati se esistono, altrimenti si crea
 // lo storage importati da data.js) e le scelte del tour vengono ripulite.
-// Ripristino con l'import (fonte primaria) o da pannello verifica.
+// Ripristino con l'import (fonte primaria) o dal pannello impostazioni.
 // Il tasto esiste solo dopo lo sblocco con password; qui si riverifica in caso
 // di richiamo programmatico.
 function eliminaTappa(id) {
-  if (!adminSbloccato) return;
+  if (!adminSbloccato) return; // solo a pannello sbloccato
   const luogo = datiCompleti().find((l) => l.id === id);
   if (!luogo) return;
   if (!confirm(`Cancellare «${campo(luogo, "title")}» dai dati del tour?
 La cancellazione vale per tutti i dispositivi; si può ripristinare con l'import
-(file HTML o preferiti.php) o dal pannello di verifica.`)) return;
+(file HTML o preferiti.php) o dal pannello delle impostazioni.`)) return;
   // nel caso in cui non ci sia ancora un import: si parte da data.js
   if (!datiImportati) datiImportati = luoghi.map((l) => ({ ...l }));
   const idx = datiImportati.findIndex((l) => l.id === id);
@@ -921,7 +920,13 @@ function aggiornaStatoAdmin() {
   if (adminSbloccato) {
     adminPassEl.type = "text";
     adminPassEl.value = "🔓";
-    adminPassEl.title = "Cancellazione abilitata — clicca per ribloccare";
+    adminPassEl.title = "Impostazioni e cancellazione abilitate — clicca per ribloccare";
+  }
+  // pulsante ⚙: visibile solo a pannello sbloccato (o con ?impostazioni=1)
+  if (adminSbloccato || accessoImpostazioni) creaBtnImpostazioni();
+  else {
+    const btn = document.getElementById("verificaBtn");
+    if (btn) btn.remove();
   }
   renderLista();
 }
@@ -935,7 +940,7 @@ adminPassEl.addEventListener("keydown", (e) => {
     adminPassEl.value = "";
     adminPassEl.title = "Password per abilitare il tasto di cancellazione (✕)";
     adminPassEl.classList.remove("sbloccato");
-    renderLista();
+    aggiornaStatoAdmin();
     return;
   }
   if (adminPassEl.value === PASSWORD_ADMIN) {
@@ -959,7 +964,7 @@ adminPassEl.addEventListener("click", () => {
     adminPassEl.value = "";
     adminPassEl.title = "Password per abilitare il tasto di cancellazione (✕)";
     adminPassEl.classList.remove("sbloccato");
-    renderLista();
+    aggiornaStatoAdmin();
   }
 });
 
@@ -1020,39 +1025,31 @@ document.querySelectorAll(".giorno-btn").forEach((btn) => {
   });
 });
 
-// ---------- verifica OCR ----------
+// ---------- contatore pannello impostazioni ----------
 function aggiornaBadgeVerifica() {
-  const btn = document.getElementById("verificaBtn"); // presente solo con ?verifica=1
-  const daVedere = datiCompleti().filter(
-    (l) => (l.needsReview?.length ?? 0) > 0 && !correzioni[l.id]?.confermato
-  ).length;
-  if (btn) btn.textContent = daVedere > 0 ? `🔍 Verifica OCR (${daVedere})` : "🔍 Verifica OCR";
-  // Il contatore «✓ verificato» è solo della vista riservata: il sito pubblico
-  // non mostra nulla della verifica (richiesta esplicita).
-  contatoreEl.hidden = !accessoVerifica;
-  if (accessoVerifica)
-    contatoreEl.textContent = daVedere > 0 ? `✔ ${daVedere} da confermare` : "✓ verificato";
+  // Contatore nel pannello: tappe senza coordinate, da posizionare a mano
+  const senzaCoord = datiCompleti().filter((l) => l.lat == null || l.lon == null).length;
+  contatoreEl.hidden = senzaCoord === 0 || !accessoImpostazioni;
+  contatoreEl.title = "Tappe senza coordinate: si posizionano nel pannello impostazioni";
+  contatoreEl.textContent = `⚠ ${senzaCoord} senza coordinate`;
 }
 
 function rigaCampo(luogo, chiave) {
-  const sospetto = luogo.needsReview?.includes(chiave);
   const valore = campo(luogo, chiave);
   const etichetta = ETICHETTE_CAMPI[chiave];
   return `<label for="v-${luogo.id}-${chiave}">${etichetta}</label>
-    <textarea id="v-${luogo.id}-${chiave}" data-campo="${chiave}" rows="${chiave === "when" ? 3 : 2}"
-      class="${sospetto ? "da-vedere" : ""}">${valore}</textarea>`;
+    <textarea id="v-${luogo.id}-${chiave}" data-campo="${chiave}" rows="${chiave === "when" ? 3 : 2}">${valore}</textarea>`;
 }
 
 function rigaCoordinate(luogo) {
-  const sospetto = luogo.needsReview?.includes("coordinates");
   const senzaCoord = luogo.lat == null || luogo.lon == null;
   const nota = NOTE_COORDINATE[luogo.id] ?? "";
   return `<label>Coordinate</label>
     <div class="coord-riga">
       <input type="number" step="0.00001" data-campo="lat" value="${luogo.lat ?? ""}"
-        class="${sospetto ? "da-vedere" : ""}" aria-label="Latitudine" placeholder="lat" />
+        aria-label="Latitudine" placeholder="lat" />
       <input type="number" step="0.00001" data-campo="lon" value="${luogo.lon ?? ""}"
-        class="${sospetto ? "da-vedere" : ""}" aria-label="Longitudine" placeholder="lon" />
+        aria-label="Longitudine" placeholder="lon" />
       <span class="coord-note">${senzaCoord ? "⚠ senza coordinate — ": ""}${nota}${nota ? " — " : ""}clicca la mappa per spostare il punto</span>
       ${senzaCoord ? "" : `<button class="vai-btn" type="button" data-centra="${luogo.id}">centra</button>`}
     </div>`;
@@ -1060,7 +1057,7 @@ function rigaCoordinate(luogo) {
 
 function creaCardVerifica(luogo) {
   const card = document.createElement("div");
-  card.className = "verifica-card" + (luogo.needsReview?.length ? " sospetta" : "");
+  card.className = "verifica-card" + (luogo.lat == null || luogo.lon == null ? " sospetta" : "");
   card.dataset.id = luogo.id;
   const confermato = Boolean(correzioni[luogo.id]?.confermato);
   card.innerHTML = `
@@ -1087,7 +1084,6 @@ function creaCardVerifica(luogo) {
   card.querySelector("[data-confermato]").addEventListener("change", (e) => {
     correzioni[luogo.id] = { ...(correzioni[luogo.id] ?? {}), confermato: e.target.checked };
     salvaCorrezioni();
-    aggiornaBadgeVerifica();
   });
   const btnCentra = card.querySelector("[data-centra]");
   if (btnCentra) {
@@ -1102,9 +1098,10 @@ function creaCardVerifica(luogo) {
 }
 
 function renderVerifica() {
-  // datiCompleti (non datiCorrenti): le tappe eliminate con la ✕ devono restare
-  // visibili qui, per poterle ripristinare
+  // datiCompleti (non datiCorrenti): le tappe senza coordinate restano
+  // visibili qui, per poterle posizionare a mano
   verificaList.replaceChildren(...datiCompleti().map(creaCardVerifica));
+  aggiornaBadgeVerifica();
 }
 
 function aggiornaTutto() {
@@ -1115,25 +1112,33 @@ function aggiornaTutto() {
   aggiornaBadgeVerifica();
 }
 
-// Il pulsante di verifica non è nell'interfaccia pubblica: il pannello resta
-// raggiungibile solo con il link dedicato ?verifica=1, che ricrea il pulsante
-// in alto e apre il pannello (se non c'è anche un deep link ?vai= da eseguire).
-if (accessoVerifica) {
-  const btn = document.createElement("button");
-  btn.id = "verificaBtn";
-  btn.className = "btn btn-ghost";
-  btn.type = "button";
-  btn.textContent = "🔍 Verifica OCR";
-  btn.addEventListener("click", () => {
-    renderVerifica();
-    verificaPanel.hidden = false;
-  });
-  document.querySelector(".topbar-actions").prepend(btn);
-  const vai = new URLSearchParams(location.search).get("vai");
-  if (!vai) {
-    renderVerifica();
-    verificaPanel.hidden = false;
+// Il pannello impostazioni non è pubblico: si apre (1) con il link dedicato
+// ?impostazioni=1 (o ?verifica=1, storico) oppure (2) dal pulsante ⚙ che
+// compare in alto DOPO lo sblocco con password (accoanto alla 🔒).
+function apriImpostazioni() {
+  renderVerifica();
+  verificaPanel.hidden = false;
+}
+
+function creaBtnImpostazioni() {
+  let btn = document.getElementById("verificaBtn");
+  if (!btn) {
+    btn = document.createElement("button");
+    btn.id = "verificaBtn";
+    btn.className = "btn btn-ghost";
+    btn.type = "button";
+    btn.addEventListener("click", apriImpostazioni);
+    document.querySelector(".topbar-actions").prepend(btn);
   }
+  btn.textContent = "⚙ Impostazioni";
+  btn.title = "Import (dal sito / file HTML), correzioni, esporta/importa stato";
+  btn.hidden = false;
+}
+
+if (accessoImpostazioni) {
+  creaBtnImpostazioni();
+  const vai = new URLSearchParams(location.search).get("vai");
+  if (!vai) apriImpostazioni();
 }
 chiudiVerifica.addEventListener("click", () => {
   verificaPanel.hidden = true;
@@ -1167,7 +1172,7 @@ exportBtn.addEventListener("click", () => {
 });
 
 ripristinaBtn.addEventListener("click", () => {
-  if (!confirm("Tornare ai DATI BASE attuali (import compreso)? Verranno eliminate le correzioni fatte nel pannello di verifica.")) return;
+  if (!confirm("Tornare ai DATI BASE attuali (import compreso)? Verranno eliminate le correzioni fatte nel pannello delle impostazioni.")) return;
   correzioni = {};
   salvaCorrezioni();
   ricostruisciMarker();

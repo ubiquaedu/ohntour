@@ -56,10 +56,10 @@
     </aside>
   </main>
 
-  <!-- Pannello di verifica OCR -->
+  <!-- Pannello impostazioni (import, correzioni, stato) -->
   <div id="verificaPanel" class="verifica-panel" hidden>
     <div class="verifica-head">
-      <h2>🔍 Verifica OCR</h2>
+      <h2>⚙ Impostazioni</h2>
       <div class="verifica-actions">
         <button id="importSitoBtn" class="btn btn-ghost" type="button"
           title="Scarica i preferiti direttamente da openhousenapoli.org (richiede l'accesso già fatto in questa finestra)">🌐 Importa dal sito</button>
@@ -71,7 +71,8 @@
         <button id="importaStatoBtn" class="btn btn-ghost" type="button"
           title="Ripristina un JSON esportato con «⬇ Esporta stato»">⬆ Importa stato</button>
         <input id="importaStatoInput" type="file" accept=".json" hidden />
-        <button id="exportBtn" class="btn btn-ghost" type="button">⬇ Esporta dati verificati (JSON)</button>
+        <button id="exportBtn" class="btn btn-ghost" type="button"
+          title="Scarica il JSON di TUTTI i luoghi (dati base + correzioni): comodo per fissare le correzioni in data.js">⬇ Esporta dati (JSON)</button>
         <button id="ripristinaBtn" class="btn btn-ghost" type="button">↺ Ripristina originali</button>
         <button id="chiudiVerifica" class="btn btn-primary" type="button">✕ Chiudi</button>
       </div>
