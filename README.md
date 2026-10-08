@@ -19,7 +19,7 @@ ohn/
 ├── style.css           # stile (dark, responsive fino a smartphone)
 ├── app.js              # logica: mappa, lista, popup, filtro giornata, tour, import, impostazioni
 ├── data.js             # i luoghi: titolo, indirizzo, orari, coordinate
-├── assets/             # miniature ritagliate da mytour.png
+├── assets/             # miniature: 30 originali ritagliate da mytour.png + ohn-<codice>.jpg dei luoghi importati
 ├── mytour.png          # immagine sorgente storica (OCR); NON richiesta dal sito
 └── _strumenti/         # utility di build (non pubblicate, innocue se caricate)
     ├── geocode.py      # geocodifica Nominatim degli indirizzi
@@ -183,6 +183,19 @@ numero dei luoghi): i dati vivono solo in `data.js`. Per una nuova edizione:
 3. allinea in `index.html` solo le etichette dei pulsanti delle giornate
    (es. «Ven 2 · Sab 3 · Dom 4»: i tasti restano gli stessi, cambia il testo);
 4. fai commit+push: il deploy su Cloudflare Pages parte da solo.
+
+### Immagini dei luoghi importati
+
+I luoghi aggiunti con l'import NON scaricano l'immagine dal sito Open House
+(la foto nel file HTML salvato è un file locale del browser, non riutilizzabile
+così com'è). Convenzione: se in `assets/` esiste **`ohn-<codice>.jpg`**
+(codice = numero `l=` della scheda, es. `ohn-490.jpg` per la scheda
+`location.php?l=490`), l'import la aggancia automaticamente al luogo (per i
+nuovi e, al prossimo import, anche per quelli già importati senza immagine).
+Per prendere la foto: apri la scheda del luogo su openhousenapoli.org, copia
+l'URL della foto principale (`/location/fotolocation/<codice>_*.jpg`),
+s scaricala (1000×625) e riducila a 200px di larghezza salvandola come
+`assets/ohn-<codice>.jpg`.
 
 ## Verifica dati iniziale (storia)
 

@@ -268,6 +268,20 @@ async function geocodifica(indirizzo) {
   return null;
 }
 
+// Immagine dei luoghi importati: convenzione assets/ohn-<codice>.jpg. Il file
+// NON viene creato dall'import (bisogna aggiungerlo in assets/, vedi README):
+// qui si controlla con una richiesta HEAD che esista davvero, per non mostrare
+// immagini rotte. Ritorna il percorso o null.
+async function immagineSeEsiste(codice) {
+  const percorso = "assets/ohn-" + codice + ".jpg";
+  try {
+    const r = await fetch(percorso, { method: "HEAD" });
+    return r.ok ? percorso : null;
+  } catch {
+    return null;
+  }
+}
+
 // Applica l'import ai dati base: aggiorna orari/indirizzi dalla fonte, ripristina
 // le tappe cancellate presenti, aggiunge i luoghi nuovi (geocodificati se
 // possibile). Ritorna il riepilogo testuale ({aggiornati, ripristinati, aggiunti,
@@ -286,15 +300,23 @@ async function applicaImport(estrazione) {
       if (p.quando && p.quando !== l.when) { l.when = p.quando; aggiornati.push(p.titolo); }
       if (p.indirizzo && p.indirizzo !== l.address) { l.address = p.indirizzo; if (!aggiornati.includes(p.titolo)) aggiornati.push(p.titolo); }
       if (l.url && p.url && l.url !== p.url) l.url = p.url;
+      // immagine mancante (es. luogo importato prima dell'aggiunta del file):
+      // se ora l'asset esiste, si aggancia
+      if (!l.image) {
+        const img = await immagineSeEsiste(p.codice);
+        if (img) { l.image = img; if (!aggiornati.includes(p.titolo)) aggiornati.push(p.titolo); }
+      }
     } else {
       // luogo nuovo: geocodifica (1,1 s di pausa è dentro geocodifica)
       const coord = await geocodifica(p.indirizzo);
+      const img = await immagineSeEsiste(p.codice);
       const nuovo = {
         id: "ohn-" + p.codice,
         title: p.titolo,
         address: p.indirizzo,
         when: p.quando,
         url: p.url,
+        ...(img ? { image: img } : {}),
         ...(coord ?? {}),
       };
       base.push(nuovo);
@@ -302,8 +324,8 @@ async function applicaImport(estrazione) {
       if (coord) aggiunti.push(p.titolo);
       else { senzaCoord.push(p.titolo); aggiunti.push(p.titolo); }
       // NB: una tappa cancellata per errore e poi reimportata torna con un
-      // nuovo id (ohn-<codice>) e senza miniatura: i dati (orari, indirizzo,
-      // url) tornano dalla fonte.
+      // nuovo id (ohn-<codice>): i dati (orari, indirizzo, url, immagine se
+      // l'asset esiste) tornano dalla fonte/convenzione.
     }
   }
   const messaggi = [];

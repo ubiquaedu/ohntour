@@ -273,10 +273,22 @@
 - **UI/JS aggiuntivi**: #importBox/#importMsg (riepilogo o errore, classe
   `import-msg errore` in rosso), `mostraImportMsg()`, `riepilogoImport()`
   (ricostruisce marker/verifica/lista dopo l'import), `scaricaJSON()`.
-  Vecchio export «⬇ Esporta dati verificati (JSON)» (luoghi-verificati.json)
+  Vecchio export «⬇ Esporta dati (JSON)» (luoghi-verificati.json)
   resta com'era. Guardie per i luoghi senza coordinate: input lat/lon vuoti
   con placeholder, niente pulsante «centra» (e il click handler ha guardia
   null); la card verifica nasconde l'immagine se `image` manca (onerror).
+- **Immagini dei luoghi importati (08/10, domanda utente: «perché non viene
+  importata l'immagine di 480 site specific e Disciplina?»)**: l'import NON
+  scarica le foto (nel file HTML salvato la src è un file locale del browser
+  tipo `./Open House Napoli - Preferiti_files/490_5188.jpeg`; la scheda online
+  risponde 403 a curl senza UA ma 200 con User-Agent browser, e la foto
+  principale sta in `/location/fotolocation/<codice>_*.jpg`). Convenzione:
+  `immagineSeEsiste(codice)` fa una HEAD su `assets/ohn-<codice>.jpg` e se il
+  file esiste lo aggancia al luogo (nuovi import E luoghi già importati senza
+  image al prossimo import). Aggiunti manualmente `assets/ohn-490.jpg` (480
+  SITE SPECIFIC) e `assets/ohn-502.jpg` (DISCIPLINA SANTA CROCE), scaricate
+  dal sito con UA browser e ridotte a 200px (PIL, quality 85). Prossimo
+  import le collegherà. Documentato in README «Immagini dei luoghi importati».
 - **Testato in locale** (server 8123, browser preview): import file 26 luoghi
   (2 nuovi: 480 SITE SPECIFIC l=490 geocodificato; ARCICONFRATERNITA DELLA
   DISCIPLINA DELLA SANTA CROCE l=502 senza coordinate — via corta non trovata
