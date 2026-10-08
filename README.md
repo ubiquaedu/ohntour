@@ -1,29 +1,22 @@
 # My OHN Tour — Mappa personalizzata per Open House Napoli
 
-Mini app web statica: **mappa OpenStreetMap** (Leaflet) con i luoghi
- dell'itinerario «My OHN Tour» (prima edizione: estratti via OCR da
- `mytour.png`, poi verificati in pagina). **Oggi i dati sono gestiti
- dall'IMPORT** (dal sito Open House o da file HTML — vedi «Pannello ⚙
- Impostazioni»). L'app non
- contiene riferimenti all'edizione: luoghi, date, orari e numero delle
- destinazioni cambiano a ogni edizione e vivono solo in `data.js`.
+Mini app web statica: **mappa OpenStreetMap** (Leaflet) dei luoghi del tour
+Open House Napoli. **La fonte dei dati è l'IMPORT**: preferiti direttamente
+dal sito Open House (o dal file HTML «My tour» salvato dal browser). L'app
+non contiene riferimenti all'edizione: luoghi, date e orari cambiano a ogni
+edizione e vivono solo nei dati importati (`data.js` è vuoto: seed di
+riserva, non usato quando esiste un import).
 
 ## Contenuti
 
-I file dell'app sono nella radice di `D:\coding\ohn` (insieme all'immagine
-sorgente `mytour.png`):
-
 ```
 ohn/
-├── index.html          # pagina: ricerca + mappa + lista + pannello verifica
+├── index.html          # pagina: header + barra admin + mappa + lista
 ├── style.css           # stile (dark, responsive fino a smartphone)
-├── app.js              # logica: mappa, lista, popup, filtro giornata, tour, import, impostazioni
-├── data.js             # i luoghi: titolo, indirizzo, orari, coordinate
-├── assets/             # miniature: 30 originali ritagliate da mytour.png + ohn-<codice>.jpg dei luoghi importati
-├── mytour.png          # immagine sorgente storica (OCR); NON richiesta dal sito
+├── app.js              # logica: mappa, lista, filtro giornata, tour, import, esclusioni
+├── data.js             # vuoto di proposito (solo per un avvio SENZA import)
+├── assets/             # miniature: ohn-<codice>.jpg dei luoghi importati
 └── _strumenti/         # utility di build (non pubblicate, innocue se caricate)
-    ├── geocode.py      # geocodifica Nominatim degli indirizzi
-    └── risultati.json  # esiti del geocoding
 ```
 
 ## Avvio locale
@@ -38,170 +31,106 @@ python -m http.server 8123
 
 poi apri http://localhost:8123/ — oppure con l'estensione Live Server di VS Code.
 
-## Funzioni
+## Come funziona
 
-- **Mappa con due strati base**: OpenStreetMap e **satellite** (Esri World
-  Imagery), selezionabili dal riquadro in alto a destra — utile in fase di
-  verifica per posizionare a mano i segnalatori.
-- Puntatori con coordinate pre-calcolate con Nominatim in fase di build
-  (nessun geocoding al volo quando usi l'app); il segnalatore di «I (NON)
-  LUOGHI DEL PORTO» è a fine via De Gasperi, all'incrocio con Piazza Municipio.
-- **Lista affiancata** con ricerca (titolo/indirizzo/orari) e pulsante «📍 Vai»
-  che centra il punto e apre il popup con miniatura, indirizzo e orari completi.
-- **Filtro per giornata**: pulsanti «Tutti» più una voce per ogni giornata
-  dell'evento sopra la lista; nascondono le card e i marker degli altri giorni
-  e si combinano con la ricerca. «Reset filtri» azzera ricerca e giornata. Con una giornata
-  selezionata la lista è **ordinata per orario di apertura** (il luogo che
-  apre prima quel giorno sta in cima) e card e popup mostrano **solo gli
-  orari di quel giorno**: per i luoghi aperti più giorni (es. sabato e
-  domenica) non compare la parte degli altri giorni. Nella vista «Tutti»
-  l'ordine resta alfabetico e gli orari sono completi.
-- **Tour personale (★) per giornata**: con una giornata selezionata, il
-  pulsante a stella sulla card aggiunge il luogo al tour
-  **di quel giorno**: passando a un altro giorno la stella non appare (e i
-  suoi conflitti nemmeno), a meno di metterla anche lì. La selezione resta
-  salvata nel browser (`localStorage`, chiave `mytour-scelte-per-giorno-v1`)
-  e sopravvive alla ricarica della pagina. Nella vista «Tutti» le stelle non
-  compaiono; con almeno una stella attiva si vedono il contatore («★ sabato:
-  N» col giorno attivo, «★ nel tour: N» come somma in «Tutti») e il pulsante
-  **«↺ Reset stelle»** (con conferma) che rimuove le stelle di tutti i giorni
-  in un colpo solo. Nelle viste di giorno ogni card ha anche il pulsante
-  **«✕»** accanto alla stella: rimuove il luogo dal tour di **tutti i giorni**
-  in una volta (con conferma), anche se il luogo non è stellato nel giorno
-  corrente; senza stelle non fa nulla. Il tasto «✕» è **sotto password**:
-  compare solo dopo aver digitato **26** nel campo «🔒 Password» in alto a
-  destra (Invio conferma); sbagliata il campo trema, giusta diventa «🔓».
-  Cliccando il campo sbloccato si riblocca; aggiornando la pagina si torna
-  bloccati comunque.
-- **Avvisi di conflitto orario a livello di giornata**: con un giorno
-  selezionato, un avviso giallo sulla card della lista
-  segnala quando due visite di QUEL giorno si sovrappongono o si susseguono
-  con meno di 30 minuti di margine (costante `MARGINE_CONFLITTO_MIN` in testa
-  ad `app.js`). I confronti riguardano i luoghi scelti con ★ **e** i
-  candidati arancio (aperti solo quel giorno, vicini al tour). Ogni luogo in
-  conflitto compare UNA sola volta nell'avviso, anche se più fasce si
-  sovrappongono. Contatore
-  «⚠ N in conflitto» sopra la lista; nella vista «Tutti» gli avvisi non
-  compaiono.
-- **Popup snellito**: il popup del marker mostra nome, indirizzo, link
-  Google Maps, **«🏛 Scheda ufficiale OHN»** (info di accesso e visita sul
-  sito openhousenapoli.org) e la nota 🟠 dei candidati; foto, orari e avvisi
-  di conflitto restano sulla card della lista.
-- **Import dei dati ufficiali** (`_strumenti/importa_preferiti.py`): dal
-  salvataggio HTML della pagina «My tour» del sito OHN estrae i luoghi,
-  li confronta con `data.js` (titolo normalizzato) e riporta le differenze
-  di indirizzo/orari; con `--scrivi` aggiunge il campo `url` ufficiale a
-  ogni voce (idempotente). Procedura per i prossimi aggiornamenti: salva la
-  pagina preferiti come HTML → `python _strumenti/importa_preferiti.py
-  [percorso] [--scrivi]` → correggi le differenze segnalate.
-- **Mappa → lista**: cliccando un segnalino, la lista scorre fino alla card
-  di quel luogo e la fa lampeggiare in giallo per un attimo (utile su mobile,
-  per non cercarla a mano); il flusso inverso resta il pulsante «📍 Vai».
-- **«Apri in Google Maps»**: in ogni popup del marker, il link apre Google
-  Maps con le indicazioni stradali verso le coordinate del punto.
+### Vista pubblica (senza password)
+
+- **Mappa a sinistra, lista a destra** (su mobile impilate, mappa sopra).
+- **Ricerca** per titolo/indirizzo/orari e **filtro per giornata**
+  («Tutti», «Ven 2», «Sab 3», «Dom 4»): nasconde card e marker degli altri
+  giorni; con una giornata selezionata la lista è **ordinata per orario di
+  apertura** e card e popup mostrano **solo gli orari di quel giorno**.
+- **Segnalibro (tour personale) per giornata**: con una giornata selezionata,
+  il segnalibro sulla card aggiunge il luogo al piano **di quel giorno**.
+  Salvato nel browser (`localStorage`, `mytour-scelte-per-giorno-v1`),
+  sopravvive alla ricarica. Contatore «nel tour: N» e «↺ Reset stelle».
+- **Avvisi di conflitto orario**: riepilogo unico sopra la lista — una riga
+  per GRUPPO di luoghi in conflitto (sovrapposizione o meno di 30 minuti di
+  margine, `MARGINE_CONFLITTO_MIN` in testa ad `app.js`), nomi cliccabili.
 - **Marker arancio «vicini da non perdere»**: con una giornata selezionata e
-  almeno una stella nel tour, i segnalini dei luoghi NON scelti che sono
-  aperti **solo quel giorno** e distano **≤ 500 m** da un luogo scelto
-  diventano arancioni e pulsano: se li salti quel giorno li perdi, quindi
-  sono le candidate naturali per «dopo la visita». I luoghi già scelti con ★
-  diventano **verdi**, gli altri restano blu. Legenda 🟠 accanto ai filtri e
-  nota nel popup; tolta la stella (o cambiando giorno) tutto torna blu. Nota:
-  due luoghi nello stesso edificio (es. ATELIER AMBRA e INTERNO 6 a Palazzo
-  Mannajuolo) hanno pin sovrapposti: quello visibile può essere l'altro.
-- Orari e fasce per il filtro e i conflitti derivano dal campo `when` di
-  `data.js` (con giorno ereditato dalle fasce successive, deduplica e
-  tolleranza ai testi non interpretabili, che restano sempre visibili).
-- **Pannello «⚙ Impostazioni»** (import, correzioni, trasferimento stato):
-  NON è nell'interfaccia pubblica. Si accede in due modi:
-  1. con il link **`?impostazioni=1`** (es. `https://myohntour.pages.dev/?impostazioni=1`;
-     compatibile anche il vecchio `?verifica=1`), oppure
-  2. digitando la **password admin** nel campo 🔒 in alto: compare il pulsante
-     **⚙ Impostazioni** accanto al campo (e si abilita anche il tasto ✕ di
-     cancellazione nelle viste di giornata); cliccando di nuovo sul campo 🔒
-     tutto si riblocca e il pulsante sparisce.
-  Il pannello gestisce l'IMPORT (dal sito o da file HTML — fonte primaria dei
-  dati), le correzioni manuali a mappa/lista/popup (restano nel browser,
-  `localStorage`) e «⬇/⬆ Esporta/Importa stato» per trasferire dati+scelte
-  tra PC e mobile. Il contatore «⚠ N senza coordinate» appare solo se ci sono
-  luoghi importati da posizionare a mano.
-- **Esporta dati (JSON)**: produce il JSON di TUTTI i luoghi (dati base +
-  correzioni), comodo per fissare le correzioni in `data.js`.
-- **Ripristina originali**: azzera le correzioni fatte nel pannello (i dati
-  importati restano).
-- La cancellazione ✕ è riservata all'admin (password) e agisce NEI DATI:
-  ripristinabile con l'import.
-- Deep link per condividere un punto: `?vai=<id>`
-  (es. `https://myohntour.pages.dev/?vai=16-i-non-luoghi-porto`).
-- Combinabili: `?impostazioni=1&vai=<id>` apre il pannello e poi centra il punto.
+  almeno un segnalibro, i luoghi NON scelti aperti **solo quel giorno** e
+  distanti **≤ 500 m** da un luogo scelto diventano arancioni; i scelti
+  diventano **verdi**; gli altri restano blu.
+- **Popup snellito**: nome, indirizzo, link Google Maps, «🏛 Scheda
+  ufficiale OHN», nota 🟠 per i candidati. Foto, orari e conflitti restano
+  sulla card.
+- **Mappa ↔ lista**: clic su un marker scorre la lista alla card (e la fa
+  lampeggiare); «📍 Vai» fa il contrario.
+- Deep link per condividere un punto: `?vai=<id>`.
+
+### Strumenti admin (password «26» nel campo 🔒 in alto)
+
+Dopo lo sblocco compaiono, **sotto l'header** (raggiungibili anche su mobile):
+
+- **🌐 Importa dal sito**: scarica i preferiti direttamente da
+  openhousenapoli.org (richiede l'accesso già fatto in quella finestra; se il
+  sito blocca il CORS si segnala e si usa l'import HTML).
+- **📄 Importa HTML**: legge il file «My tour» salvato come HTML dal browser.
+  L'import ha priorità sui dati: aggiorna orari/indirizzi, aggiunge le
+  località nuove e riporta le foto (miniatura locale `assets/ohn-<codice>.jpg`
+  se esiste, altrimenti l'URL della foto sul sito ricostruito dal file).
+- **Posizionamento guidato**: finito l'import, per ogni luogo senza
+  coordinate l'app tenta PRIMA la geocodifica Nominatim (indirizzo, poi
+  titolo). Solo se non trova nulla chiede il click sulla mappa («clicca il
+  punto esatto», Salta/Annulla). I luoghi rimasti in sospeso restano in fondo
+  alla lista con 🎯 **Posiziona**.
+- **✕ = esclusa SOLO dal giorno selezionato**: nelle viste di giornata la ✕
+  toglie la località dal piano **solo di quel giorno** (reversibile). I
+  segnalibri degli altri giorni restano e non vengono mai toccati.
+- **↺ Ripristina**: le località escluse appaiono in fondo alla lista (bordo
+  rosso, solo admin); ↺ le rimette nel piano del giorno della vista, o di
+  tutti i giorni nella vista «Tutti».
+- **⬇ Esporta stato / ⬆ Importa stato**: JSON con dati importati, correzioni,
+  segnalibri ed esclusioni — per trasferire tutto da PC a mobile.
+- **🗑 Svuota dati**: con conferma cancella TUTTI i dati locali (import,
+  correzioni, segnalibri, esclusioni): l'app riparte vuota, pronta per
+  l'import della nuova edizione.
+- Click sul campo 🔒 sbloccato per ribloccare; al refresh si torna bloccati.
+
+### Storage (localStorage)
+
+| chiave | contenuto |
+| --- | --- |
+| `mytour-dati-importati-v1` | dati risultanti dall'ultimo import |
+| `mytour-mappa-correzioni-v1` | coordinate posizionate a mano (e testi) |
+| `mytour-scelte-per-giorno-v1` | segnalibri per giornata |
+| `mytour-esclusioni-v1` | esclusioni per giornata (la ✕) |
+
+Diagnostica: `?reset=1` azzera tutto i dati e ricarica (equivalente a «🗑
+Svuota dati», senza conferma).
 
 ## Pubblicazione su Cloudflare Pages
 
 La cartella è tutta statica: si pubblica senza build. **Il sito è online su
-https://myohntour.pages.dev** (precedente edizione: https://ohn26.pages.dev,
-progetto Direct Upload con dati vecchi, ancora online).
+https://myohntour.pages.dev.**
 
-**Deploy automatico da GitHub (attivo)**
+**Deploy automatico da GitHub (attivo)**: il repository
+https://github.com/ubiquaedu/ohntour (branch `main`) è collegato a un
+progetto Cloudflare Pages Git-connected: **ogni push su `main` produce un
+nuovo deploy automatico** (circa un minuto). Basta commit+push.
 
-Il repository https://github.com/ubiquaedu/ohntour (branch `main`) è collegato
-a un progetto Cloudflare Pages Git-connected: **ogni push su `main` produce un
-nuovo deploy automatico** su https://myohntour.pages.dev (circa un minuto).
-Non serve ricaricare file a mano.
-
-**Metodo Direct Upload (alternativa, senza riga di comando)**
-
-1. Vai su https://dash.cloudflare.com → **Workers & Pages** → **Create** →
-   scheda **Pages** → **Upload assets** (caricamento diretto).
-2. Nome del progetto: per esempio `fuori-porta` (diventerà
-   `https://fuori-porta.pages.dev`).
-3. Trascina **l'intera cartella** `D:\coding\ohn` (Cloudflare pubblica il
-   contenuto: index.html, style.css, app.js, data.js, assets/; mytour.png,
-   README.md e _strumenti/ vengono caricati ma sono innocui).
-4. **Deploy site**: dopo pochi secondi il sito è online sull'URL indicato.
-
-**Alternativa con la CLI (opzionale)**
-
-```
-npm install -g wrangler
-wrangler login
-cd D:\coding\ohn
-wrangler pages deploy . --project-name ohn26
-```
-
-Per aggiornare i dati dopo la verifica: modifica `data.js` (o sostituiscilo con
-l'export JSON convertito in `export const luoghi = [...]`), controlla in locale
-e fai commit+push (il deploy parte da solo). Con Direct Upload basta invece
-ricaricare i file nello stesso progetto: nasce un nuovo deployment.
+Direct Upload (alternativa): dash.cloudflare.com → Workers & Pages → Pages →
+Upload assets, trascinare l'intera cartella.
 
 ## Nuova edizione
 
-L'app non contiene riferimenti descrittivi all'edizione corrente (anno, date,
-numero dei luoghi): i dati vivono solo in `data.js`. Per una nuova edizione:
-
-1. aggiorna `data.js` (titoli, indirizzi, orari `when`, coordinate, `url`);
-   per orari e schede ufficiali usa `importa_preferiti.py`;
-2. se gli indirizzi cambiano, ricalcola le coordinate con `geocode.py`;
-3. allinea in `index.html` solo le etichette dei pulsanti delle giornate
-   (es. «Ven 2 · Sab 3 · Dom 4»: i tasti restano gli stessi, cambia il testo);
-4. fai commit+push: il deploy su Cloudflare Pages parte da solo.
+1. **🗑 Svuota dati** (barra admin): l'app riparte pulita.
+2. **Import** (dal sito o file HTML «My tour»): la lista e la mappa si
+   riempiono; le località nuove vengono geocodificate (Nominatim, con
+   ripiego sul titolo); le foto arrivano da `assets/ohn-<codice>.jpg` o
+   dall'URL del sito. Se un luogo resta senza coordinate, 🎯 + click sulla
+   mappa (o l'import lo trova da solo al prossimo giro).
+3. Allinea in `index.html` le etichette dei pulsanti delle giornate
+   («Ven 2 · Sab 3 · Dom 4»): i tasti restano gli stessi, cambia il testo.
+4. Costruisci il piano con i segnalibri per giornata; usa ✕ per escludere
+   le località che non puoi visitare (e ↺ se cambi idea).
 
 ### Immagini dei luoghi importati
 
-I luoghi aggiunti con l'import NON scaricano l'immagine dal sito Open House
-(la foto nel file HTML salvato è un file locale del browser, non riutilizzabile
-così com'è). Convenzione: se in `assets/` esiste **`ohn-<codice>.jpg`**
-(codice = numero `l=` della scheda, es. `ohn-490.jpg` per la scheda
-`location.php?l=490`), l'import la aggancia automaticamente al luogo (per i
-nuovi e, al prossimo import, anche per quelli già importati senza immagine).
-Per prendere la foto: apri la scheda del luogo su openhousenapoli.org, copia
-l'URL della foto principale (`/location/fotolocation/<codice>_*.jpg`),
-s scaricala (1000×625) e riducila a 200px di larghezza salvandola come
-`assets/ohn-<codice>.jpg`.
-
-## Verifica dati iniziale (storia)
-
-I 30 luoghi della prima edizione sono stati ricavati via OCR da `mytour.png` e
-verificati in pagina dall'utente: **tutti i punti confermati** senza modifiche
-(export JSON del pannello confrontato con `data.js`: nessuna differenza). Il
-segnalatore di «I (NON) LUOGHI DEL PORTO» è stato posizionato a mano a fine
-via De Gasperi, incrocio con Piazza Municipio. Oggi la fonte primaria è
-l'IMPORT (vedi «Pannello ⚙ Impostazioni»); la verifica OCR è solo storia.
+Convenzione: se in `assets/` esiste **`ohn-<codice>.jpg`** (codice = numero
+`l=` della scheda, es. `ohn-490.jpg` per la scheda `location.php?l=490`),
+l'import la aggancia automaticamente al luogo. Se manca, l'import usa
+l'URL della foto sul sito ricostruito dal file HTML. Per una miniatura
+locale: apri la scheda del luogo su openhousenapoli.org, scarica la foto
+principale (`/location/fotolocation/<codice>_*.jpg`), riducila a 200px di
+larghezza e salvala come `assets/ohn-<codice>.jpg`.

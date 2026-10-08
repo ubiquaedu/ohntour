@@ -2,8 +2,9 @@
 // Fonte primaria dei dati = IMPORT (fetch di preferiti.php dal sito OHN con le
 // tue credenziali, o file HTML «My tour» salvato): ha priorità su data.js e può
 // aggiornare orari, ripristinare tappe cancellate e aggiungere località nuove
-// (geocodificate via Nominatim). La ✕ cancella NEI DATI (validi per tutti i
-// dispositivi, replicabili con Esporta/Importa stato); data.js è il seed iniziale.
+// (geocodificate via Nominatim). La ✕ NON cancella più i dati: aggiorna il
+// piano PER GIORNO tramite i preferiti (segnalibri); le esclusioni sono
+// reversibili e viaggiano in Esporta/Importa stato; data.js è il seed iniziale.
 import { luoghi } from "./data.js";
 
 const mapEl = document.getElementById("map");
@@ -20,27 +21,34 @@ const riepilogoConflittiEl = document.getElementById("riepilogoConflitti");
 const riepilogoTitoloEl = document.getElementById("riepilogoTitolo");
 const riepilogoListaEl = document.getElementById("riepilogoLista");
 const chiudiConflittiBtn = document.getElementById("chiudiConflitti");
-const verificaBtn = document.getElementById("verificaBtn"); // pulsante ⚙ creato dinamicamente (vedi sotto)
-const verificaPanel = document.getElementById("verificaPanel");
-const verificaList = document.getElementById("verificaList");
-const chiudiVerifica = document.getElementById("chiudiVerifica");
-const exportBtn = document.getElementById("exportBtn");
+const adminBar = document.getElementById("adminBar");
+const posizionaBanner = document.getElementById("posizionaBanner");
+const posizionaTesto = document.getElementById("posizionaTesto");
+const posizionaSalta = document.getElementById("posizionaSalta");
+const posizionaAnnulla = document.getElementById("posizionaAnnulla");
 const importSitoBtn = document.getElementById("importSitoBtn");
 const importFileBtn = document.getElementById("importFileBtn");
 const importFileInput = document.getElementById("importFileInput");
-const importBox = document.getElementById("importBox");
-const importMsg = document.getElementById("importMsg");
 const esportaStatoBtn = document.getElementById("esportaStatoBtn");
 const importaStatoBtn = document.getElementById("importaStatoBtn");
 const importaStatoInput = document.getElementById("importaStatoInput");
-const ripristinaBtn = document.getElementById("ripristinaBtn");
+const svuotaDatiBtn = document.getElementById("svuotaDatiBtn");
 const adminPassEl = document.getElementById("adminPass");
 
 const STORAGE_KEY = "mytour-mappa-correzioni-v1";
+// Reset da URL per la prova/diagnostica: apre l'app con i dati azzerati.
+// Solo a scopo di test, NON è nell'interfaccia: http://…/?reset=1
+if (new URLSearchParams(location.search).has("reset")) {
+  for (const k of ["mytour-dati-importati-v1", "mytour-mappa-correzioni-v1", "mytour-scelte-per-giorno-v1", "mytour-esclusioni-v1"])
+    localStorage.removeItem(k);
+  location.replace(location.pathname);
+}
 const STORAGE_SCELTE = "mytour-scelte-per-giorno-v1";
+// esclusioni per giornata: le località tolte dal piano con «✕». Reversibili.
+const STORAGE_ESCLUSIONI = "mytour-esclusioni-v1";
 // Dati importati (da preferiti.php o file HTML): fonte primaria con priorità su
-// data.js. La ✕ cancella da QUI, quindi la cancellazione vale su tutti i
-// dispositivi (o si replica con Esporta/Importa stato).
+// data.js. La ✕ NON tocca più questi dati (l'esclusione è per giornata e
+// reversibile); gli id restano qui e si riprendono con «↺ Ripristina».
 const STORAGE_IMPORTATI = "mytour-dati-importati-v1";
 // etichette dei giorni per i contatori («★ sabato: N»)
 const ETICHETTA_GIORNO = { ven: "venerdì", sab: "sabato", dom: "domenica" };
@@ -48,11 +56,6 @@ const NAPOLI = [40.849, 14.25];
 // Segnalibro (richiesta utente: al posto della stella) come SVG inline:
 // eredita currentColor → si colora da .star-btn (spento/attivo) senza immagini.
 const SEGNALIBRO_SVG = `<svg class="icona-segnalibro" viewBox="0 0 24 24" width="20" height="20" aria-hidden="true" focusable="false"><path d="M6 3h12a1 1 0 0 1 1 1v17l-7-4.5L5 21V4a1 1 0 0 1 1-1z" fill="currentColor"/></svg>`;
-const ETICHETTE_CAMPI = {
-  title: "Titolo",
-  address: "Indirizzo",
-  when: "Quando",
-};
 // Giornate dell'evento: nomi per il riconoscimento nel campo «when» e chiavi
 // dei pulsanti di filtro.
 const GIORNO_PER_NOME = { "venerdì": "ven", "sabato": "sab", "domenica": "dom" };
@@ -63,20 +66,12 @@ const NOME_PER_GIORNO = Object.fromEntries(
 // margine minimo (minuti) tra la fine di una visita e l'inizio dell'altra:
 // sotto questa soglia (o con sovrapposizione) la coppia è «in conflitto»
 const MARGINE_CONFLITTO_MIN = 30;
-// Password che abilita il tasto «✕» (rimozione dal tour di tutti i giorni):
+// Password che abilita il tasto «✕» (aggiornamento del piano per giorni):
 // protezione leggera, per lo stesso motivo del pannello impostazioni — il sito
-// è condiviso con un amico e cancellazione/impostazioni non devono sembrare
+// è condiviso con un amico e cancellazioni/impostazioni non devono sembrare
 // pubbliche. NON persistita: al refresh si torna bloccati.
 const PASSWORD_ADMIN = "26";
 let adminSbloccato = false;
-
-const NOTE_COORDINATE = {
-  "05-cantiere-ex-mercato-ittico": "piazza senza numero civico",
-  "14-educandato-statale": "«Largo dei Miracoli» non mappato su OSM: coordinate della chiesa del monastero",
-  "16-i-non-luoghi-porto": "segnalatore a fine via De Gasperi × Piazza Municipio (confermato dall'utente)",
-  "21-liberty-al-vomero": "piazza senza numero civico",
-  "28-santa-lucia-borgo": "piazza senza numero civico",
-};
 
 // Vista riservata alla configurazione: ?impostazioni=1 apre direttamente il
 // pannello (import, correzioni, trasferimento stato). Compatibilità: anche
@@ -91,6 +86,7 @@ let correzioni = caricaCorrezioni(); // { id: { title?, address?, when?, lat?, l
 // «visito quel luogo di sabato»; di domenica la stella non appare (e i suoi
 // conflitti di sabato neanche), a meno di metterla anche per domenica.
 let scelte = caricaScelte(); // { ven: Set, sab: Set, dom: Set } di id
+let esclusioni = caricaEsclusioni(); // { ven: Set, sab: Set, dom: Set } di id
 let giornoFiltro = ""; // "", "ven", "sab", "dom" — non persistito: all'avvio sempre «Tutti»
 // dati importati da preferiti.php o file HTML: se esistono SOSTITUISCONO data.js
 // (fonte primaria, richiesta esplicita). La ✕ rimuove da qui: la cancellazione
@@ -146,6 +142,25 @@ function caricaScelte() {
   } catch {
     return vuoto;
   }
+}
+
+function caricaEsclusioni() {
+  const vuoto = { ven: new Set(), sab: new Set(), dom: new Set() };
+  try {
+    const dati = JSON.parse(localStorage.getItem(STORAGE_ESCLUSIONI));
+    if (!dati) return vuoto;
+    for (const g of Object.keys(vuoto)) vuoto[g] = new Set(dati[g] ?? []);
+    return vuoto;
+  } catch {
+    return vuoto;
+  }
+}
+
+function salvaEsclusioni() {
+  const dati = {};
+  for (const [g, ins] of Object.entries(esclusioni)) dati[g] = [...ins];
+  localStorage.setItem(STORAGE_ESCLUSIONI, JSON.stringify(dati));
+  cacheDati = null; // visibilità filtrata per giorno
 }
 
 // ---------- dati base (importato > data.js) ----------
@@ -234,11 +249,19 @@ function estraiLuoghiDaHTML(testo) {
       indirizzo = nodi[0] ?? "";
       quando = nodi.slice(1).join(" | ");
     }
+    // foto: nel salvataggio HTML la src è un file locale del browser
+    // («./Open House Napoli - Preferiti_files/490_5188.jpeg»), ma il nome file
+    // è quello del sito: la foto pubblica sta in /location/fotolocation/.
+    let foto = null;
+    const nomeFoto = (tr.querySelector('a[href*="location.php?l="] img')?.getAttribute("src") ?? "")
+      .match(/[\w.-]+\.(?:jpe?g|png|webp)$/i);
+    if (nomeFoto) foto = "https://www.openhousenapoli.org/location/fotolocation/" + nomeFoto[0];
     luoghi_.push({
       codice,
       titolo: titolo.textContent.trim(),
       indirizzo,
       quando,
+      foto,
       url: "https://www.openhousenapoli.org/location/location.php?l=" + codice,
     });
   }
@@ -275,7 +298,7 @@ async function geocodifica(indirizzo) {
 async function immagineSeEsiste(codice) {
   const percorso = "assets/ohn-" + codice + ".jpg";
   try {
-    const r = await fetch(percorso, { method: "HEAD" });
+    const r = await fetch(percorso, { method: "HEAD", cache: "no-store" });
     return r.ok ? percorso : null;
   } catch {
     return null;
@@ -301,15 +324,16 @@ async function applicaImport(estrazione) {
       if (p.indirizzo && p.indirizzo !== l.address) { l.address = p.indirizzo; if (!aggiornati.includes(p.titolo)) aggiornati.push(p.titolo); }
       if (l.url && p.url && l.url !== p.url) l.url = p.url;
       // immagine mancante (es. luogo importato prima dell'aggiunta del file):
-      // se ora l'asset esiste, si aggancia
+      // si aggancia l'asset locale se esiste, altrimenti la foto remota letta
+      // dal file HTML
       if (!l.image) {
-        const img = await immagineSeEsiste(p.codice);
+        const img = (await immagineSeEsiste(p.codice)) ?? p.foto;
         if (img) { l.image = img; if (!aggiornati.includes(p.titolo)) aggiornati.push(p.titolo); }
       }
     } else {
       // luogo nuovo: geocodifica (1,1 s di pausa è dentro geocodifica)
       const coord = await geocodifica(p.indirizzo);
-      const img = await immagineSeEsiste(p.codice);
+      const img = (await immagineSeEsiste(p.codice)) ?? p.foto;
       const nuovo = {
         id: "ohn-" + p.codice,
         title: p.titolo,
@@ -331,7 +355,7 @@ async function applicaImport(estrazione) {
   const messaggi = [];
   if (aggiornati.length) messaggi.push("Orari/indirizzi aggiornati: " + aggiornati.join(", "));
   if (aggiunti.length) messaggi.push("Località aggiunte: " + aggiunti.join(", "));
-  if (senzaCoord.length) messaggi.push("⚠ Coordinate non trovate (posizionabile a mano dal pannello): " + senzaCoord.join(", "));
+  if (senzaCoord.length) messaggi.push("⚠ Coordinate non trovate: si riprova con Nominatim (nome del luogo) e poi si chiede il click sulla mappa: " + senzaCoord.join(", "));
   if (!messaggi.length) messaggi.push("Nessuna differenza: i dati sono già allineati alla fonte.");
   salvaImportati();
   return { aggiornati, aggiunti, senzaCoord, messaggi };
@@ -340,6 +364,18 @@ async function applicaImport(estrazione) {
 // stelle della giornata selezionata (Set vuoto in «Tutti», dove non si scelgono)
 function scelteDelGiorno() {
   return (giornoFiltro && scelte[giornoFiltro]) || new Set();
+}
+
+// Un luogo è escluso dal piano del giorno dato (o di QUALSIASI giorno se non
+// se ne passa uno): lista e mappa lo nascondono in quelle viste.
+function esclusaDalGiorno(id, giorno = giornoFiltro) {
+  if (!giorno) return false;
+  return esclusioni[giorno]?.has(id) ?? false;
+}
+
+// La località è esclusa da TUTTI i giorni (per la sezione «↺ Ripristina»)
+function esclusaSempre(id) {
+  return Object.values(esclusioni).some((ins) => ins.has(id));
 }
 
 function totScelte() {
@@ -616,6 +652,7 @@ function primaOraNelGiorno(luogo) {
 
 function visibileNelFiltro(luogo) {
   if (!giornoFiltro) return true;
+  if (esclusaDalGiorno(luogo.id)) return false; // esclusa dal piano del giorno
   const fasce = parseOrari(campo(luogo, "when"));
   if (fasce.length === 0) return true;
   return fasce.some((f) => GIORNO_PER_NOME[f.giorno] === giornoFiltro);
@@ -637,9 +674,11 @@ function applicaFiltroMarker() {
 
 function inquadraTutti() {
   if (vaiIniziale) return; // con un deep link la vista è già del punto richiesto
+  const punti = datiCorrenti().filter((l) => l.lat != null && l.lon != null);
+  if (!punti.length) return; // nessuna coordinata (dati di prova vuoti): la vista resta su Napoli
   map.invalidateSize();
   map.fitBounds(
-    L.latLngBounds(datiCorrenti().map((l) => [l.lat, l.lon])).pad(0.08),
+    L.latLngBounds(punti.map((l) => [l.lat, l.lon])).pad(0.08),
     { maxZoom: 15 }
   );
 }
@@ -669,19 +708,30 @@ function ricostruisciMarker() {
 }
 
 // ---------- lista ----------
-function cardHTML(luogo) {
+function cardHTML(luogo, senzaCoord, esclusa = false) {
   const thumb = luogo.image
     ? `<img src="${luogo.image}" alt="" loading="lazy" />`
+    : "";
+  // 🎯 per i luoghi senza coordinate (solo modalità admin): apre il posizionamento
+  const posiziona = senzaCoord && adminMode()
+    ? `<button class="vai-btn" type="button" data-posiziona="${luogo.id}"
+        title="Posiziona questo luogo sulla mappa">🎯 Posiziona</button>`
     : "";
   // La stella del tour si vede e si usa solo con una giornata selezionata e
   // vale per QUEL giorno; nella vista «Tutti» le card restano senza stella.
   const scelta = scelteDelGiorno().has(luogo.id);
   // «✕» accanto alla stella: presente nelle viste di giorno SOLO dopo lo
-  // sblocco con password (campo 🔒 in alto) e cancella la tappa DAI DATI
-  // (vale per tutti i dispositivi; si ripristina con l'import)
+  // sblocco con password (campo 🔒 in alto): aggiorna il piano per giorni
+  // (esclude dai giorni senza preferito; reversibile con «↺ Ripristina»)
   const del = giornoFiltro && adminSbloccato
     ? `<button class="del-btn" type="button" data-elimina="${luogo.id}"
-        title="Cancella la tappa DAI DATI (vale per tutti i dispositivi; si ripristina con l'import)">✕</button>`
+        title="Aggiorna il piano: esclude dai giorni senza preferito (reversibile con ↺ Ripristina)">✕</button>`
+    : "";
+  // «↺» sulle card ESCLUSE (solo admin): ripristina nel giorno della vista
+  // (o in tutti i giorni in vista «Tutti»)
+  const ripristina = esclusa && adminMode()
+    ? `<button class="vai-btn" type="button" data-ripristina="${luogo.id}"
+        title="Rimette la località nel piano ${giornoFiltro ? "di " + ETICHETTA_GIORNO[giornoFiltro] : "di tutti i giorni"}">↺ Ripristina</button>`
     : "";
   const star = giornoFiltro
     ? `<button class="star-btn ${scelta ? "attiva" : ""}" type="button" data-scelta="${luogo.id}"
@@ -694,21 +744,25 @@ function cardHTML(luogo) {
       <p class="card-when"></p>
     </div>
     <div class="card-side">
-      <button class="vai-btn" type="button" data-vai="${luogo.id}">📍 Vai</button>
+      ${posiziona}
+      ${ripristina}
+      ${senzaCoord ? "" : `<button class="vai-btn" type="button" data-vai="${luogo.id}">📍 Vai</button>`}
       ${star}
       ${del}
     </div>`;
 }
 
-function creaCard(luogo) {
+function creaCard(luogo, senzaCoord = false, esclusa = false) {
   const card = document.createElement("div");
-  card.className = "card";
+  card.className = "card" + (senzaCoord ? " da-posizionare" : "") + (esclusa ? " esclusa" : "");
   card.dataset.id = luogo.id;
-  card.innerHTML = cardHTML(luogo);
+  card.innerHTML = cardHTML(luogo, senzaCoord, esclusa);
   card.querySelector(".card-title").textContent = campo(luogo, "title");
   card.querySelector(".card-addr").textContent = campo(luogo, "address");
   card.querySelector(".card-when").textContent = testoWhenVisualizzato(luogo);
   card.addEventListener("click", (e) => {
+    if (e.target.closest("[data-posiziona]")) return;
+    if (e.target.closest("[data-ripristina]")) return;
     if (e.target.closest("[data-vai]")) return;
     if (e.target.closest("[data-scelta]")) return;
     if (e.target.closest("[data-elimina]")) return;
@@ -837,10 +891,14 @@ function applicaFiltro() {
       .map((el) => el.textContent)
       .join(" ")
       .toLowerCase();
+    // le card EXTRA (da posizionare / escluse, sezione admin in fondo) restano
+    // sempre visibili: servono per 🎯 e ↺, non devono sparire col filtro giorno
+    const extra = card.classList.contains("da-posizionare") || card.classList.contains("esclusa");
     const mostra =
-      (!q || testo.includes(q)) && (!luogo || visibileNelFiltro(luogo));
+      (!q || testo.includes(q)) &&
+      (extra || (!luogo || visibileNelFiltro(luogo)));
     card.classList.toggle("nascosta", !mostra);
-    if (mostra) visibili++;
+    if (mostra && !extra) visibili++;
   }
   conteggioEl.textContent = `(${visibili}/${lista.length})`;
   applicaFiltroMarker();
@@ -859,34 +917,61 @@ function toggleScelta(id) {
   aggiornaColoriMarker();
 }
 
-// «✕» accanto al segnalibro: CANCELLA la tappa NEI DATI (richiesta
-// esplicita: vale per tutti i dispositivi, non solo questo browser). La
-// rimozione si applica ai dati base (importati se esistono, altrimenti si crea
-// lo storage importati da data.js) e le scelte del tour vengono ripulite.
-// Ripristino con l'import (fonte primaria) o dal pannello impostazioni.
-// Il tasto esiste solo dopo lo sblocco con password; qui si riverifica in caso
-// di richiamo programmatico.
+// «✕» accanto al segnalibro: esclude la tappa SOLO dalla GIORNATA
+// selezionata (richiesta utente: «voglio cancellare da venerdì, ma poi
+// l'ho visitata domenica»; con segnalibro su sabato e ✕ di domenica la
+// versione che escludeva «tutti i giorni non preferiti» cancellava troppo).
+// Reversibile con «↺ Ripristina» in fondo alla lista (o in «Tutti» per tutti
+// i giorni). I DATI importati NON vengono toccati. La ✕ resta sotto password.
 function eliminaTappa(id) {
   if (!adminSbloccato) return; // solo a pannello sbloccato
+  if (!giornoFiltro) return; // la ✕ esiste solo nelle viste di giorno
   const luogo = datiCompleti().find((l) => l.id === id);
   if (!luogo) return;
-  if (!confirm(`Cancellare «${campo(luogo, "title")}» dai dati del tour?
-La cancellazione vale per tutti i dispositivi; si può ripristinare con l'import
-(file HTML o preferiti.php) o dal pannello delle impostazioni.`)) return;
-  // nel caso in cui non ci sia ancora un import: si parte da data.js
-  if (!datiImportati) datiImportati = luoghi.map((l) => ({ ...l }));
-  const idx = datiImportati.findIndex((l) => l.id === id);
-  if (idx >= 0) datiImportati.splice(idx, 1);
-  salvaImportati();
-  for (const ins of Object.values(scelte)) ins.delete(id); // pulizia scelte
-  salvaScelte();
-  // il marker va rimosso dalla mappa (datiCorrenti non lo contiene più)
-  const marker = markerPerId.get(id);
-  if (marker) { map.removeLayer(marker); markerPerId.delete(id); }
+  const titolo = campo(luogo, "title");
+  if (scelte[giornoFiltro].has(id)) {
+    // preferito del giorno corrente: togli solo quello (come il clic sul segnalibro)
+    scelte[giornoFiltro].delete(id);
+    esclusioni[giornoFiltro].delete(id);
+    salvaScelte();
+    salvaEsclusioni();
+    bannerAutochiudente(`↺ «${titolo}» tolta dal piano di ${ETICHETTA_GIORNO[giornoFiltro]}.`);
+  } else {
+    esclusioni[giornoFiltro].add(id);
+    salvaEsclusioni();
+    const conStella = Object.keys(scelte).filter((g) => scelte[g].has(id));
+    bannerAutochiudente(
+      `✕ «${titolo}» esclusa da ${ETICHETTA_GIORNO[giornoFiltro]}.` +
+        (conStella.length ? ` Resta nei giorni: ${conStella.map((g) => ETICHETTA_GIORNO[g]).join(", ")} (segnalibro).` : "") +
+        " Ripristino con ↺ in fondo alla lista."
+    );
+  }
+  // il marker sparisce dalle viste dove il luogo è escluso
   renderLista();
   refreshConflitti();
-  aggiornaColoriMarker();
-  aggiornaBadgeVerifica();
+  applicaFiltroMarker();
+}
+
+// «↺ Ripristina» su una card esclusa: rimette il luogo nel piano (del giorno
+// della vista, o di tutti i giorni in vista «Tutti»). Reversibile come la ✕.
+function ripristinaTappa(id) {
+  if (!adminMode()) return;
+  const luogo = datiCompleti().find((l) => l.id === id);
+  if (!luogo) return;
+  const giorni = giornoFiltro ? [giornoFiltro] : Object.keys(esclusioni);
+  let tolti = 0;
+  for (const g of giorni) {
+    if (esclusioni[g].delete(id)) tolti++;
+  }
+  salvaEsclusioni();
+  if (tolti) {
+    bannerAutochiudente(
+      `↺ «${campo(luogo, "title")}» ripristinata ${giornoFiltro ? "in " + ETICHETTA_GIORNO[giornoFiltro] : "in tutti i giorni"}.`
+    );
+  }
+  renderLista();
+  refreshConflitti();
+  applicaFiltroMarker();
 }
 
 // «Reset stelle»: svuota il tour di TUTTI i giorni (le selezioni di prova non
@@ -944,12 +1029,9 @@ function aggiornaStatoAdmin() {
     adminPassEl.value = "🔓";
     adminPassEl.title = "Impostazioni e cancellazione abilitate — clicca per ribloccare";
   }
-  // pulsante ⚙: visibile solo a pannello sbloccato (o con ?impostazioni=1)
-  if (adminSbloccato || accessoImpostazioni) creaBtnImpostazioni();
-  else {
-    const btn = document.getElementById("verificaBtn");
-    if (btn) btn.remove();
-  }
+  // barra admin e card «da posizionare»: visibili solo a pannello sbloccato
+  // (o con ?impostazioni=1)
+  aggiornaAdminUI();
   renderLista();
 }
 
@@ -1005,7 +1087,24 @@ function renderLista() {
       return oa - ob;
     });
   }
-  listEl.replaceChildren(...dati.map(creaCard));
+  // In modalità admin, in fondo alla lista (sezione «ripristino») vanno:
+  //  - i luoghi SENZA coordinate (con 🎯 Posiziona)
+  //  - i luoghi ESCLUSI dal piano (con ↺ Ripristina): nel giorno della vista
+  //    (esclusi da quel giorno) o in «Tutti» (esclusi da QUALSIASI giorno).
+  // Senza admin si comportano come prima: le escluse spariscono dalle viste.
+  // NB: si itera su datiCompleti() perché datiCorrenti() NON contiene i luoghi
+  // senza coordinate (vengono filtrati lì): qui invece devono stare in lista.
+  const main = [];
+  const extra = [];
+  for (const l of datiCompleti()) {
+    const senzaCoord = l.lat == null || l.lon == null;
+    const visibileNelGiorno = !giornoFiltro || visibileNelFiltro(l);
+    const esclusa = giornoFiltro ? esclusaDalGiorno(l.id) : esclusaSempre(l.id);
+    if (senzaCoord) extra.push(creaCard(l, true, false));
+    else if (esclusa && adminMode()) extra.push(creaCard(l, false, true));
+    else if (visibileNelGiorno) main.push(creaCard(l, false, false));
+  }
+  listEl.replaceChildren(...[...main, ...extra]);
   applicaFiltro();
 }
 
@@ -1018,6 +1117,16 @@ listEl.addEventListener("click", (e) => {
   const del = e.target.closest("[data-elimina]");
   if (del) {
     eliminaTappa(del.dataset.elimina);
+    return;
+  }
+  const rip = e.target.closest("[data-ripristina]");
+  if (rip) {
+    ripristinaTappa(rip.dataset.ripristina);
+    return;
+  }
+  const pos = e.target.closest("[data-posiziona]");
+  if (pos) {
+    avviaPosizionamento(pos.dataset.posiziona);
     return;
   }
   const btn = e.target.closest("[data-vai]");
@@ -1047,83 +1156,132 @@ document.querySelectorAll(".giorno-btn").forEach((btn) => {
   });
 });
 
-// ---------- contatore pannello impostazioni ----------
+// ---------- contatore tappe da posizionare (solo in modalità admin) ----------
+function adminMode() {
+  return adminSbloccato || accessoImpostazioni;
+}
+
 function aggiornaBadgeVerifica() {
-  // Contatore nel pannello: tappe senza coordinate, da posizionare a mano
   const senzaCoord = datiCompleti().filter((l) => l.lat == null || l.lon == null).length;
-  contatoreEl.hidden = senzaCoord === 0 || !accessoImpostazioni;
-  contatoreEl.title = "Tappe senza coordinate: si posizionano nel pannello impostazioni";
-  contatoreEl.textContent = `⚠ ${senzaCoord} senza coordinate`;
+  contatoreEl.hidden = senzaCoord === 0 || !adminMode();
+  contatoreEl.title = "Tappe senza coordinate: clicca 🎯 sulla card per posizionarle sulla mappa";
+  contatoreEl.textContent = `⚠ ${senzaCoord} da posizionare`;
 }
 
-function rigaCampo(luogo, chiave) {
-  const valore = campo(luogo, chiave);
-  const etichetta = ETICHETTE_CAMPI[chiave];
-  return `<label for="v-${luogo.id}-${chiave}">${etichetta}</label>
-    <textarea id="v-${luogo.id}-${chiave}" data-campo="${chiave}" rows="${chiave === "when" ? 3 : 2}">${valore}</textarea>`;
+// ---------- posizionamento sulla mappa (coda automatica dopo l'import, o singolo luogo) ----------
+let codaPosizionamento = []; // id dei luoghi ancora senza coordinate
+let posizionaCorrente = null; // id del luogo che aspetta il click sulla mappa
+let bannerRiepilogo = ""; // riepilogo dell'ultimo import, mostrato sopra il prompt
+let bannerTimer = null;
+
+function mostraBanner(testo, conAzioni) {
+  clearTimeout(bannerTimer);
+  posizionaBanner.hidden = false;
+  posizionaTesto.textContent = testo;
+  posizionaSalta.hidden = !conAzioni;
+  posizionaAnnulla.hidden = !conAzioni;
 }
 
-function rigaCoordinate(luogo) {
-  const senzaCoord = luogo.lat == null || luogo.lon == null;
-  const nota = NOTE_COORDINATE[luogo.id] ?? "";
-  return `<label>Coordinate</label>
-    <div class="coord-riga">
-      <input type="number" step="0.00001" data-campo="lat" value="${luogo.lat ?? ""}"
-        aria-label="Latitudine" placeholder="lat" />
-      <input type="number" step="0.00001" data-campo="lon" value="${luogo.lon ?? ""}"
-        aria-label="Longitudine" placeholder="lon" />
-      <span class="coord-note">${senzaCoord ? "⚠ senza coordinate — ": ""}${nota}${nota ? " — " : ""}clicca la mappa per spostare il punto</span>
-      ${senzaCoord ? "" : `<button class="vai-btn" type="button" data-centra="${luogo.id}">centra</button>`}
-    </div>`;
+function bannerAutochiudente(testo, ms = 7000) {
+  mostraBanner(testo, false);
+  bannerTimer = setTimeout(() => { posizionaBanner.hidden = true; }, ms);
 }
 
-function creaCardVerifica(luogo) {
-  const card = document.createElement("div");
-  card.className = "verifica-card" + (luogo.lat == null || luogo.lon == null ? " sospetta" : "");
-  card.dataset.id = luogo.id;
-  const confermato = Boolean(correzioni[luogo.id]?.confermato);
-  card.innerHTML = `
-    <div class="vc-head">
-      <img src="${luogo.image ?? ""}" alt="" loading="lazy" onerror="this.style.visibility='hidden'" />
-      <span class="vc-titolo"></span>
-      <label class="vc-ok"><input type="checkbox" data-confermato ${confermato ? "checked" : ""} /> confermo</label>
-    </div>
-    <div class="vc-grid">
-      ${rigaCampo(luogo, "title")}
-      ${rigaCampo(luogo, "address")}
-      ${rigaCampo(luogo, "when")}
-      ${rigaCoordinate(luogo)}
-    </div>`;
-  card.querySelector(".vc-titolo").textContent = campo(luogo, "title");
+function fermaPosizionamento() {
+  codaPosizionamento = [];
+  posizionaCorrente = null;
+  posizionaBanner.hidden = true;
+}
 
-  card.addEventListener("input", (e) => {
-    const campo_ = e.target.dataset.campo;
-    if (!campo_) return;
-    correzioni[luogo.id] = { ...(correzioni[luogo.id] ?? {}), [campo_]: e.target.value };
-    salvaCorrezioni();
+async function prossimaPosizione() {
+  const id = codaPosizionamento.shift();
+  posizionaCorrente = id ?? null;
+  if (!id) {
+    // fine coda: il messaggio dipende da quanto è rimasto indietro (Salti)
+    const rimasti = datiCompleti().filter((l) => l.lat == null || l.lon == null);
+    bannerAutochiudente(
+      bannerRiepilogo +
+        (rimasti.length
+          ? `\n⚠ ${rimasti.length} ${rimasti.length === 1 ? "luogo resta" : "luoghi restano"} senza coordinate: usa 🎯 sulla sua card quando vuoi posizionarl${rimasti.length === 1 ? "o" : "i"}.`
+          : "\n✓ Tutti i luoghi hanno le coordinate."),
+      9000
+    );
+    bannerRiepilogo = "";
     aggiornaTutto();
-  });
-  card.querySelector("[data-confermato]").addEventListener("change", (e) => {
-    correzioni[luogo.id] = { ...(correzioni[luogo.id] ?? {}), confermato: e.target.checked };
-    salvaCorrezioni();
-  });
-  const btnCentra = card.querySelector("[data-centra]");
-  if (btnCentra) {
-    btnCentra.addEventListener("click", () => {
-      const l = datiCompleti().find((x) => x.id === luogo.id);
-      if (!l || l.lat == null || l.lon == null) return; // guardia: senza coordinate non centra
-      map.setView([l.lat, l.lon], 17);
-      markerPerId.get(luogo.id)?.openPopup();
-    });
+    return;
   }
-  return card;
+  const l = datiCompleti().find((x) => x.id === id);
+  // PRIMA la geocodifica (indirizzo e nome), poi il click sulla mappa: se
+  // Nominatim risolve il luogo non serve che l'utente lo piazzzi a mano
+  mostraBanner(
+    (bannerRiepilogo ? bannerRiepilogo + "\n" : "") +
+      `🔎 Cerco «${l?.title ?? id}» su OpenStreetMap…`,
+    false
+  );
+  const trovato = await riprovaGeocodifica(id);
+  if (posizionaCorrente !== id) return; // annullata nel frattempo
+  if (trovato) {
+    prossimaPosizione(); // il prossimo della coda (anche la fine)
+    return;
+  }
+  posizionaCorrente = id;
+  mostraBanner(
+    (bannerRiepilogo ? bannerRiepilogo + "\n" : "") +
+      `📍 Posiziona «${l?.title ?? id}» sulla mappa: clicca il punto esatto.` +
+      (codaPosizionamento.length ? ` (${codaPosizionamento.length} dopo questo)` : ""),
+    true
+  );
+  aggiornaTutto();
 }
 
-function renderVerifica() {
-  // datiCompleti (non datiCorrenti): le tappe senza coordinate restano
-  // visibili qui, per poterle posizionare a mano
-  verificaList.replaceChildren(...datiCompleti().map(creaCardVerifica));
-  aggiornaBadgeVerifica();
+function avviaPosizionamento(id) {
+  codaPosizionamento = [id];
+  prossimaPosizione();
+}
+
+posizionaSalta.addEventListener("click", () => prossimaPosizione());
+posizionaAnnulla.addEventListener("click", () => {
+  bannerRiepilogo = "";
+  fermaPosizionamento();
+});
+document.addEventListener("keydown", (e) => {
+  if (e.key === "Escape" && posizionaCorrente) {
+    bannerRiepilogo = "";
+    fermaPosizionamento();
+  }
+});
+
+// clic sulla mappa in modalità posizionamento: imposta le coordinate del luogo
+map.on("click", (e) => {
+  if (!posizionaCorrente) return;
+  applicaCoordinate(posizionaCorrente, e.latlng.lat, e.latlng.lng);
+  prossimaPosizione();
+});
+
+// Coordinate trovate (dalla mappa o da Nominatim): salvate come correzione
+// (valgono per tutti i dispositivi via Esporta/Importa stato).
+function applicaCoordinate(id, lat, lon) {
+  correzioni[id] = { ...(correzioni[id] ?? {}), lat, lon };
+  salvaCorrezioni();
+  ricostruisciMarker(); // il luogo può non avere ancora un marker
+}
+
+// Per il luogo corrente si riprova PRIMA la geocodifica (richiesta utente: se
+// «Disciplina» sta sulla mappa non c'è motivo di farla pescare a mano): con
+// l'indirizzo e, in ripiego, col nome del luogo (Nominatim risolve spesso anche
+// solo i toponimi: «Palazzo…», chiese, ecc.). Ritorna true se ha trovato.
+async function riprovaGeocodifica(id) {
+  const l = datiCompleti().find((x) => x.id === id);
+  if (!l) return false;
+  const candidati = [campo(l, "address"), campo(l, "title")].filter(Boolean);
+  for (const candidato of candidati) {
+    const coord = await geocodifica(candidato);
+    if (coord) {
+      applicaCoordinate(id, coord.lat, coord.lon);
+      return true;
+    }
+  }
+  return false;
 }
 
 function aggiornaTutto() {
@@ -1134,73 +1292,24 @@ function aggiornaTutto() {
   aggiornaBadgeVerifica();
 }
 
-// Il pannello impostazioni non è pubblico: si apre (1) con il link dedicato
-// ?impostazioni=1 (o ?verifica=1, storico) oppure (2) dal pulsante ⚙ che
-// compare in alto DOPO lo sblocco con password (accoanto alla 🔒).
-function apriImpostazioni() {
-  renderVerifica();
-  verificaPanel.hidden = false;
-}
-
-function creaBtnImpostazioni() {
-  let btn = document.getElementById("verificaBtn");
-  if (!btn) {
-    btn = document.createElement("button");
-    btn.id = "verificaBtn";
-    btn.className = "btn btn-ghost";
-    btn.type = "button";
-    btn.addEventListener("click", apriImpostazioni);
-    document.querySelector(".topbar-actions").prepend(btn);
+// Gli strumenti admin stanno NELLA PAGINA PRINCIPALE: la barra #adminBar
+// appare sotto l'header dopo lo sblocco con password (o con ?impostazioni=1,
+// o il vecchio ?verifica=1, storico).
+function aggiornaAdminUI() {
+  adminBar.hidden = !adminMode();
+  if (accessoImpostazioni && !posizionaCorrente && codaPosizionamento.length === 0) {
+    const vai = new URLSearchParams(location.search).get("vai");
+    if (!vai) {
+      // apertura diretta via URL: si offre il posizionamento di chi non ce l'ha
+      const daPosizionare = datiCompleti().filter((l) => l.lat == null || l.lon == null);
+      if (daPosizionare.length) {
+        bannerRiepilogo = "⚠ " + daPosizionare.length + " luoghi senza coordinate.";
+        codaPosizionamento = daPosizionare.map((l) => l.id);
+        prossimaPosizione();
+      }
+    }
   }
-  btn.textContent = "⚙ Impostazioni";
-  btn.title = "Import (dal sito / file HTML), correzioni, esporta/importa stato";
-  btn.hidden = false;
 }
-
-if (accessoImpostazioni) {
-  creaBtnImpostazioni();
-  const vai = new URLSearchParams(location.search).get("vai");
-  if (!vai) apriImpostazioni();
-}
-chiudiVerifica.addEventListener("click", () => {
-  verificaPanel.hidden = true;
-});
-document.addEventListener("keydown", (e) => {
-  if (e.key === "Escape" && !verificaPanel.hidden) verificaPanel.hidden = true;
-});
-
-// clic sulla mappa col pannello aperto: sposta il punto selezionato (si sceglie con «centra» + trascina il marker)
-map.on("click", (e) => {
-  if (verificaPanel.hidden) return;
-  const id = window.__luogoSelezionato;
-  if (!id) return;
-  correzioni[id] = { ...(correzioni[id] ?? {}), lat: e.latlng.lat, lon: e.latlng.lng };
-  salvaCorrezioni();
-  ricostruisciMarker(); // il luogo può non avere ancora un marker (nuovo import senza coordinate)
-  aggiornaTutto();
-  renderVerifica();
-});
-
-exportBtn.addEventListener("click", () => {
-  const dati = datiCompleti().map(({ id, title, address, when, lat, lon, confermato, ...resto }) => ({
-    id, title, address, when, lat, lon, ...(confermato ? { confermato } : {}), ...resto,
-  }));
-  const blob = new Blob([JSON.stringify(dati, null, 2)], { type: "application/json" });
-  const a = document.createElement("a");
-  a.href = URL.createObjectURL(blob);
-  a.download = "luoghi-verificati.json";
-  a.click();
-  URL.revokeObjectURL(a.href);
-});
-
-ripristinaBtn.addEventListener("click", () => {
-  if (!confirm("Tornare ai DATI BASE attuali (import compreso)? Verranno eliminate le correzioni fatte nel pannello delle impostazioni.")) return;
-  correzioni = {};
-  salvaCorrezioni();
-  ricostruisciMarker();
-  renderVerifica();
-  aggiornaTutto();
-});
 
 // ---------- import: fonte primaria dei dati ----------
 // Due strade che convergono su applicaImport():
@@ -1213,16 +1322,28 @@ ripristinaBtn.addEventListener("click", () => {
 // aggiunge località nuove (geocodificate via Nominatim).
 
 function mostraImportMsg(testo, tipo = "ok") {
-  importBox.hidden = false;
-  importMsg.className = tipo === "err" ? "import-msg errore" : "import-msg";
-  importMsg.textContent = testo;
+  if (tipo === "err") {
+    bannerRiepilogo = "";
+    fermaPosizionamento();
+    bannerAutochiudente("⚠ " + testo, 12000);
+  } else {
+    mostraBanner(testo, false);
+  }
 }
 
 function riepilogoImport(res) {
-  mostraImportMsg(res.messaggi.join("\n"));
   ricostruisciMarker();
-  renderVerifica();
   aggiornaTutto();
+  bannerRiepilogo = res.messaggi.join("\n");
+  const daPosizionare = datiCompleti().filter((l) => l.lat == null || l.lon == null);
+  if (daPosizionare.length) {
+    // coda automatica di posizionamento: il banner guida luogo per luogo
+    codaPosizionamento = daPosizionare.map((l) => l.id);
+    prossimaPosizione();
+  } else {
+    bannerAutochiudente(bannerRiepilogo + "\n✓ Tutti i luoghi hanno le coordinate.");
+    bannerRiepilogo = "";
+  }
 }
 
 importSitoBtn.addEventListener("click", async () => {
@@ -1300,15 +1421,34 @@ function scaricaJSON(nome, oggetto) {
 esportaStatoBtn.addEventListener("click", () => {
   const data = new Date().toISOString().slice(0, 10);
   scaricaJSON("mytour-stato-" + data + ".json", {
-    versione: 1,
+    versione: 2,
     esportato: new Date().toISOString(),
     datiImportati,
     correzioni,
     scelte: Object.fromEntries(Object.entries(scelte).map(([g, ins]) => [g, [...ins]])),
+    esclusioni: Object.fromEntries(Object.entries(esclusioni).map(([g, ins]) => [g, [...ins]])),
   });
 });
 
 importaStatoBtn.addEventListener("click", () => importaStatoInput.click());
+
+// «🗑 Svuota dati»: riparte pulito per la nuova edizione (richiesta utente:
+// «di anno in anno si ricomincia pulito»). Cancella TUTTI i dati locali
+// (dati importati, correzioni, segnalibri, esclusioni): data.js vuoto non
+// mostra nulla; la lista si ripopola con l'import. Con conferma.
+svuotaDatiBtn.addEventListener("click", () => {
+  if (!confirm(
+    "Svuotare TUTTI i dati?\n\n" +
+      "- dati importati (le località del tour)\n" +
+      "- correzioni di coordinate e testi\n" +
+      "- segnalibri (il piano dei 3 giorni)\n" +
+      "- esclusioni\n\n" +
+      "L'app riparte vuota: si ricarica con l'import (dal sito o file HTML)."
+  )) return;
+  for (const k of [STORAGE_IMPORTATI, STORAGE_KEY, STORAGE_SCELTE, STORAGE_ESCLUSIONI])
+    localStorage.removeItem(k);
+  location.replace(location.pathname); // riparte pulito (senza ?reset=1 in cronologia)
+});
 
 importaStatoInput.addEventListener("change", async () => {
   const file = importaStatoInput.files?.[0];
@@ -1334,18 +1474,23 @@ importaStatoInput.addEventListener("change", async () => {
     STORAGE_SCELTE,
     JSON.stringify(Object.fromEntries(Object.entries(scelteArr).map(([g, arr]) => [g, arr])))
   );
+  const esclusioniArr = stato.esclusioni ?? {};
+  localStorage.setItem(
+    STORAGE_ESCLUSIONI,
+    JSON.stringify(Object.fromEntries(Object.entries(esclusioniArr).map(([g, arr]) => [g, arr])))
+  );
   location.reload();
 });
 
-// marker cliccabile = selezione per lo spostamento via mappa
+// il popup sulla mappa evidenzia la card corrispondente nella lista
 map.on("popupopen", (e) => {
   const id = [...markerPerId.entries()].find(([, m]) => m === e.popup._source)?.[0];
   if (!id) return;
-  window.__luogoSelezionato = id;
   evidenziaCardLista(id); // la lista segue il marker (non il viceversa: c'è già «📍 Vai»)
 });
 
 // ---------- avvio ----------
+aggiornaAdminUI();
 renderLista();
 refreshConflitti();
 aggiornaBadgeVerifica();

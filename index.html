@@ -22,6 +22,23 @@
     </nav>
   </header>
 
+  <!-- Strumenti admin: appaiono dopo lo sblocco con password (o ?impostazioni=1).
+       Sotto l'header (richiesta: raggiungibili anche da mobile senza scroll). -->
+  <div id="adminBar" hidden>
+    <button id="importSitoBtn" class="btn btn-ghost btn-small" type="button"
+      title="Scarica i preferiti direttamente da openhousenapoli.org (richiede l'accesso già fatto in questa finestra)">🌐 Importa dal sito</button>
+    <button id="importFileBtn" class="btn btn-ghost btn-small" type="button"
+      title="Legge il file «My tour» salvato come HTML dal browser">📄 Importa HTML</button>
+    <input id="importFileInput" type="file" accept=".html,.htm" hidden />
+    <button id="esportaStatoBtn" class="btn btn-ghost btn-small" type="button"
+      title="Scarica un JSON con dati importati, correzioni, esclusioni e scelte — per trasferirli su un altro dispositivo">⬇ Esporta stato</button>
+    <button id="importaStatoBtn" class="btn btn-ghost btn-small" type="button"
+      title="Ripristina un JSON esportato con «⬇ Esporta stato» su un altro dispositivo">⬆ Importa stato</button>
+    <input id="importaStatoInput" type="file" accept=".json" hidden />
+    <button id="svuotaDatiBtn" class="btn btn-ghost btn-small" type="button"
+      title="Cancella TUTTI i dati locali (dati importati, correzioni, segnalibri, esclusioni): l'app riparte vuota, pronta per l'import della nuova edizione">🗑 Svuota dati</button>
+  </div>
+
   <main class="layout">
     <section class="map-wrap" aria-label="Mappa dei luoghi">
       <div id="map"></div>
@@ -56,35 +73,11 @@
     </aside>
   </main>
 
-  <!-- Pannello impostazioni (import, correzioni, stato) -->
-  <div id="verificaPanel" class="verifica-panel" hidden>
-    <div class="verifica-head">
-      <h2>⚙ Impostazioni</h2>
-      <div class="verifica-actions">
-        <button id="importSitoBtn" class="btn btn-ghost" type="button"
-          title="Scarica i preferiti direttamente da openhousenapoli.org (richiede l'accesso già fatto in questa finestra)">🌐 Importa dal sito</button>
-        <button id="importFileBtn" class="btn btn-ghost" type="button"
-          title="Legge il file «My tour» salvato come HTML dal browser">📄 Importa HTML</button>
-        <input id="importFileInput" type="file" accept=".html,.htm" hidden />
-        <button id="esportaStatoBtn" class="btn btn-ghost" type="button"
-          title="Scarica un JSON con dati importati, correzioni e scelte — per trasferirli su un altro dispositivo">⬇ Esporta stato</button>
-        <button id="importaStatoBtn" class="btn btn-ghost" type="button"
-          title="Ripristina un JSON esportato con «⬇ Esporta stato»">⬆ Importa stato</button>
-        <input id="importaStatoInput" type="file" accept=".json" hidden />
-        <button id="exportBtn" class="btn btn-ghost" type="button"
-          title="Scarica il JSON di TUTTI i luoghi (dati base + correzioni): comodo per fissare le correzioni in data.js">⬇ Esporta dati (JSON)</button>
-        <button id="ripristinaBtn" class="btn btn-ghost" type="button">↺ Ripristina originali</button>
-        <button id="chiudiVerifica" class="btn btn-primary" type="button">✕ Chiudi</button>
-      </div>
-    </div>
-    <div id="importBox" class="import-box" hidden><p id="importMsg" class="import-msg"></p></div>
-    <p class="verifica-nota">
-      Fonte primaria dei dati: l'import (dal sito o da file HTML). Aggiorna orari e indirizzi dalla fonte,
-      aggiunge le località nuove (geocodificate via OpenStreetMap) e ripristina le tappe cancellate per errore.
-      La ✕ cancella NEI DATI (vale per tutti i dispositivi): si ripristina con l'import o con «⬇/⬆ Esporta/Importa stato».
-      Le correzioni manuali qui sotto restano salvate in questo browser e vengono applicate a mappa e lista.
-    </p>
-    <div id="verificaList" class="verifica-list"></div>
+  <!-- Banner per il posizionamento dei luoghi senza coordinate (coda automatica dopo l'import) -->
+  <div id="posizionaBanner" hidden>
+    <p id="posizionaTesto"></p>
+    <button id="posizionaSalta" class="btn btn-ghost btn-small" type="button">Salta</button>
+    <button id="posizionaAnnulla" class="btn btn-ghost btn-small" type="button">Annulla</button>
   </div>
 
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>

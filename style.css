@@ -229,90 +229,59 @@ body {
 }
 .vai-btn:hover { background: rgba(255, 255, 255, 0.16); }
 
-/* ---------- pannello verifica ---------- */
-.verifica-panel {
-  position: fixed;
-  inset: 57px 0 0 0;
-  z-index: 1100;
-  background: rgba(11, 18, 32, 0.985);
-  overflow: auto;
-  padding: 14px 18px 40px;
-}
-.verifica-head {
+/* ---------- amministrazione nella pagina principale ---------- */
+/* barra dei pulsanti admin: appare sotto l'header dopo lo sblocco con password */
+#adminBar {
   display: flex;
-  justify-content: space-between;
-  align-items: center;
-  gap: 12px;
+  gap: 8px;
   flex-wrap: wrap;
-  position: sticky;
-  top: -14px;
-  margin: -14px -18px 10px;
-  padding: 14px 18px;
-  background: inherit;
+  align-items: center;
+  padding: 8px 16px;
+  background: rgba(0, 0, 0, 0.28);
   border-bottom: 1px solid var(--border);
 }
-.verifica-head h2 { margin: 0; font-size: 17px; }
-.verifica-actions { display: flex; gap: 8px; flex-wrap: wrap; }
-.verifica-nota { color: var(--muted); font-size: 13px; line-height: 1.5; max-width: 900px; }
+#adminBar[hidden] { display: none; }
 
-/* esito dell'import (dal sito o da file HTML): riepilogo o errore */
-.import-box {
-  border: 1px solid var(--border);
-  border-radius: 10px;
-  background: rgba(0, 0, 0, 0.22);
+/* banner di posizionamento (coda automatica dopo l'import o singolo luogo):
+   flottante sopra la mappa, in alto al centro */
+#posizionaBanner {
+  position: fixed;
+  top: 64px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 1200;
+  max-width: min(560px, calc(100vw - 24px));
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  background: rgba(11, 18, 32, 0.97);
+  border: 1px solid rgba(255, 165, 90, 0.55);
+  border-radius: 12px;
+  box-shadow: 0 6px 24px rgba(0, 0, 0, 0.45);
   padding: 10px 14px;
 }
-.import-msg { margin: 0; font-size: 13px; line-height: 1.5; white-space: pre-line; }
-.import-msg.errore { color: #ff9d9d; }
+#posizionaBanner[hidden] { display: none; }
+#posizionaTesto { margin: 0; font-size: 13px; line-height: 1.45; white-space: pre-line; flex: 1; }
+#posizionaBanner .btn { flex: 0 0 auto; }
 
-.verifica-card {
-  border: 1px solid var(--border);
-  border-radius: 12px;
-  background: rgba(0, 0, 0, 0.18);
-  padding: 12px;
-  margin-bottom: 12px;
-  max-width: 980px;
+/* card di un luogo ancora senza coordinate (solo in modalità admin): bordo arancio */
+.card.da-posizionare { border-color: rgba(255, 165, 90, 0.55); }
+.card.da-posizionare .card-title::after {
+  content: " — ⚠ da posizionare";
+  font-weight: 600;
+  font-size: 11px;
+  color: #ffb46e;
 }
-.verifica-card.sospetta { border-color: rgba(255, 165, 90, 0.6); } /* luogo senza coordinate */
 
-.vc-head { display: flex; gap: 10px; align-items: center; margin-bottom: 10px; flex-wrap: wrap; }
-.vc-head img {
-  width: 64px; height: 46px; object-fit: cover; border-radius: 8px; background: rgba(255,255,255,0.06);
+/* card di un luogo ESCLUSO dal piano (solo in modalità admin): bordo rosso tenue,
+   opacità ridotta: in fondo alla lista con «↺ Ripristina» */
+.card.esclusa { border-color: rgba(229, 62, 62, 0.5); opacity: 0.75; }
+.card.esclusa .card-title::after {
+  content: " — ✕ esclusa dal piano";
+  font-weight: 600;
+  font-size: 11px;
+  color: var(--accent2);
 }
-.vc-titolo { font-weight: 800; font-size: 13px; flex: 1; }
-.vc-ok {
-  display: flex; align-items: center; gap: 6px;
-  font-size: 12.5px; color: var(--muted); cursor: pointer; user-select: none;
-}
-.vc-ok input { width: 16px; height: 16px; accent-color: var(--verde); }
-
-.vc-grid { display: grid; grid-template-columns: 92px 1fr; gap: 8px 10px; align-items: start; }
-.vc-grid label { font-size: 12px; color: var(--muted); padding-top: 9px; }
-.vc-grid textarea, .vc-grid .coord-riga {
-  width: 100%;
-  background: rgba(255, 255, 255, 0.05);
-  border: 1px solid var(--border);
-  border-radius: 8px;
-  color: var(--text);
-  padding: 8px 10px;
-  font: inherit;
-  font-size: 13px;
-  resize: vertical;
-}
-.coord-riga { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
-.coord-riga input {
-  width: 130px;
-  background: rgba(255, 255, 255, 0.05);
-  border: 1px solid var(--border);
-  border-radius: 8px;
-  color: var(--text);
-  padding: 8px 10px;
-  font: inherit;
-  font-size: 13px;
-}
-.coord-note { color: var(--muted); font-size: 11.5px; flex: 1 1 200px; }
-
-.verifica-vuoto { color: var(--muted); font-size: 13px; }
 
 /* ---------- filtri per giornata e stato tour ---------- */
 .filtri-giornata {
@@ -506,6 +475,5 @@ body {
      a 92px l'ultimo pallino restava nascosto e il lucchetto non si leggeva */
   .pass-admin { width: 150px; }
   .pass-admin.sbloccato { width: 64px; }
-  .verifica-panel { inset: 0; padding-top: 60px; }
-  .verifica-head { top: -60px; }
+  #posizionaBanner { top: 110px; }
 }
