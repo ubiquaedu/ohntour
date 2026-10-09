@@ -24,7 +24,8 @@
   Salta/Annulla (Esc). I rimasti in sospeso: in fondo alla lista con
   🎯 Posiziona (bordo arancio). Coordinate = correzione `correzioni[id]`.
 - **Segnalibri per giornata** («tour personale»): solo nelle viste di
-  giorno; `mytour-scelte-per-giorno-v1`; contatore e «↺ Reset stelle».
+  giorno; `mytour-scelte-per-giorno-v1`; contatore e «↺ Reset segnalibri»
+  (solo nelle viste di giorno, nascosto in «Tutti»).
 - **✕ = esclusa SOLO dal giorno selezionato** (admin): esclusioni in
   `mytour-esclusioni-v1` {ven,sab,dom}; reversibili con **↺ Ripristina**
   sulle card in fondo alla lista (solo admin; bordo rosso). Per il

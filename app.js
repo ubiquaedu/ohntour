@@ -717,9 +717,20 @@ function cardHTML(luogo, senzaCoord, esclusa = false) {
     ? `<button class="vai-btn" type="button" data-posiziona="${luogo.id}"
         title="Posiziona questo luogo sulla mappa">🎯 Posiziona</button>`
     : "";
-  // La stella del tour si vede e si usa solo con una giornata selezionata e
-  // vale per QUEL giorno; nella vista «Tutti» le card restano senza stella.
+  // La stella del tour si usa solo con una giornata selezionata e vale per
+  // QUEL giorno; nella vista «Tutti» le card mostrano in sola lettura i
+  // segnalibri già messi per i giorni, così il tour composto si vede a colpo
+  // d'occhio (i giorni sono indicati in piccolo accanto alla stella).
   const scelta = scelteDelGiorno().has(luogo.id);
+  const giorniProva = !giornoFiltro
+    ? Object.entries(ETICHETTA_GIORNO)
+        .filter(([g]) => scelte[g]?.has(luogo.id))
+        .map(([, eta]) => eta)
+    : [];
+  const badgeTutti = giorniProva.length
+    ? `<span class="badge-tour" title="Segnalibro del tour per ${giorniProva.join(", ")}">
+        ${SEGNALIBRO_SVG} ${giorniProva.join(" · ")}</span>`
+    : "";
   // «✕» accanto alla stella: presente nelle viste di giorno SOLO dopo lo
   // sblocco con password (campo 🔒 in alto): aggiorna il piano per giorni
   // (esclude dai giorni senza preferito; reversibile con «↺ Ripristina»)
@@ -749,6 +760,7 @@ function cardHTML(luogo, senzaCoord, esclusa = false) {
       ${senzaCoord ? "" : `<button class="vai-btn" type="button" data-vai="${luogo.id}">📍 Vai</button>`}
       ${star}
       ${del}
+      ${badgeTutti}
     </div>`;
 }
 
@@ -974,13 +986,20 @@ function ripristinaTappa(id) {
   applicaFiltroMarker();
 }
 
-// «Reset stelle»: svuota il tour di TUTTI i giorni (le selezioni di prova non
-// devono restare nel browser quando il sito viene condiviso).
+// «Reset segnalibri»: svuota i segnalibri della GIORNATA selezionata o, in
+// vista «Tutti», del tour INTERO (richiesto: la vista generale serve anche
+// per svuotare tutto il tour rifatto da capo). Sempre con conferma.
 function resetScelte() {
+  const inGiorno = giornoFiltro ? (scelte[giornoFiltro]?.size ?? 0) : 0;
   const tot = totScelte();
-  if (!tot) return;
-  if (!confirm(`Rimuovere tutti i ${tot} segnalibri dal tour (tutti i giorni)?`)) return;
-  for (const ins of Object.values(scelte)) ins.clear();
+  if (!giornoFiltro && tot === 0) return;
+  if (giornoFiltro && inGiorno === 0) return;
+  const msg = !giornoFiltro
+    ? `Rimuovere tutti i ${tot} segnalibri dal tour (tutti i giorni)?`
+    : `Rimuovere ${inGiorno} segnalibri dal tour di ${ETICHETTA_GIORNO[giornoFiltro]}?`;
+  if (!confirm(msg)) return;
+  if (giornoFiltro) scelte[giornoFiltro].clear();
+  else for (const ins of Object.values(scelte)) ins.clear();
   salvaScelte();
   renderLista();
   refreshConflitti();
@@ -1011,11 +1030,22 @@ function refreshConflitti() {
     ? `${SEGNALIBRO_SVG} ${ETICHETTA_GIORNO[giornoFiltro]}: ${nScelte}`
     : `${SEGNALIBRO_SVG} nel tour: ${nScelte}`;
   aggiornaResetScelte();
+  aggiornaResetFiltri();
 }
 
-// «Reset stelle» accanto ai filtri di giornata: visibile solo con scelte attive.
+// «Reset segnalibri» accanto ai filtri di giornata: visibile con almeno un
+// segnalibro nella vista corrente (quel giorno, o tutti in «Tutti»).
 function aggiornaResetScelte() {
-  resetScelteBtn.hidden = totScelte() === 0;
+  resetScelteBtn.hidden = giornoFiltro
+    ? (scelte[giornoFiltro]?.size ?? 0) === 0
+    : totScelte() === 0;
+}
+
+// «Reset filtri» (torna a «Tutti» + azzera ricerca): ha senso solo se si è
+// in una vista di giorno; in «Tutti» è nascosto perché non c'è nulla da
+// resettare.
+function aggiornaResetFiltri() {
+  resetBtn.hidden = !giornoFiltro;
 }
 
 // Sblocco/blocco del tasto «✕»: password giusta → le card mostrano «✕» nelle
@@ -1133,6 +1163,9 @@ listEl.addEventListener("click", (e) => {
   if (btn) vaiAlLuogo(btn.dataset.vai);
 });
 searchEl.addEventListener("input", applicaFiltro);
+// «Reset filtri»: torna alla vista «Tutti» + azzera la ricerca; utile solo
+// quando si è in una vista di giorno (in «Tutti» il pulsante è nascosto:
+// non c'è nulla da azzerare).
 resetBtn.addEventListener("click", () => {
   searchEl.value = "";
   giornoFiltro = "";

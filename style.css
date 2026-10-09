@@ -162,6 +162,22 @@ body {
 
 .card-side { flex: 0 0 auto; display: flex; flex-direction: column; align-items: flex-end; gap: 8px; }
 
+/* Vista «Tutti»: badge di sola lettura con i giorni che hanno il segnalibro
+   per quel luogo (il tour composto si vede a colpo d'occhio). */
+.badge-tour {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 3px 8px;
+  border-radius: 999px;
+  background: rgba(30, 200, 165, 0.14);
+  color: #1ec8a5;
+  font-size: 11px;
+  font-weight: 700;
+  white-space: nowrap;
+}
+.badge-tour svg { width: 12px; height: 12px; }
+
 /* ---------- popup ---------- */
 .popup-body { max-width: 260px; }
 .popup-titolo { font-weight: 900; font-size: 14px; margin: 0 0 4px; }

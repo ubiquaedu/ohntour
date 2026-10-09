@@ -43,7 +43,8 @@ poi apri http://localhost:8123/ — oppure con l'estensione Live Server di VS Co
 - **Segnalibro (tour personale) per giornata**: con una giornata selezionata,
   il segnalibro sulla card aggiunge il luogo al piano **di quel giorno**.
   Salvato nel browser (`localStorage`, `mytour-scelte-per-giorno-v1`),
-  sopravvive alla ricarica. Contatore «nel tour: N» e «↺ Reset stelle».
+  sopravvive alla ricarica. Contatore «nel tour: N» e «↺ Reset segnalibri»
+  (visibile solo nelle viste di giorno: svuota il tour di quel giorno).
 - **Avvisi di conflitto orario**: riepilogo unico sopra la lista — una riga
   per GRUPPO di luoghi in conflitto (sovrapposizione o meno di 30 minuti di
   margine, `MARGINE_CONFLITTO_MIN` in testa ad `app.js`), nomi cliccabili.
