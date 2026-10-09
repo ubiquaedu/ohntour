@@ -26,8 +26,11 @@
        Sotto l'header (richiesta: raggiungibili anche da mobile senza scroll). -->
   <div id="adminBar" hidden>
     <button id="importFileBtn" class="btn btn-ghost btn-small" type="button"
-      title="SUL SITO OHN: apri «My tour» (preferiti), salva la pagina con Ctrl+S («Pagina web, completa») e QUI prendi quel file. Aggiorna orari/indirizzi, ripristina le tappe cancellate e aggiunge le località nuove.">📄 Importa HTML</button>
+      title="1) SUL SITO OHN apri «My tour» (preferiti) e salva la pagina con Ctrl+S scegliendo «Pagina web, completa» — crea il file .html + una cartella «…_files» con le foto. 2) QUI scegli il file .html e, se vuoi le miniature, la cartella. Aggiorna orari/indirizzi, ripristina le tappe cancellate e aggiunge le località nuove.">📄 Importa HTML</button>
     <input id="importFileInput" type="file" accept=".html,.htm" hidden />
+    <input id="importFotoInput" type="file" webkitdirectory hidden />
+    <button id="importFotoBtn" class="btn btn-ghost btn-small" type="button"
+      title="Opzionale, per le miniature: scegli la cartella «Pagina web, completa _files» creata da Ctrl+S (contiene già le foto scaricate dal browser). L'app le ridimensiona e le incorpora nei dati.">🖼 Cartella foto</button>
     <button id="esportaStatoBtn" class="btn btn-ghost btn-small" type="button"
       title="Scarica un JSON con dati importati, correzioni, esclusioni e scelte — per trasferirli su un altro dispositivo">⬇ Esporta stato</button>
     <button id="importaStatoBtn" class="btn btn-ghost btn-small" type="button"

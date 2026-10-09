@@ -38,9 +38,16 @@
   esclusioni}.
 - **🗑 Svuota dati**: con conferma cancella i QUATTRO storage e ricarica —
   riparte pulita per la nuova edizione. Equivalente tecnico: `?reset=1`.
-- **Foto**: asset locale `assets/ohn-<codice>.jpg` (HEAD con cache:no-store)
-  altrimenti URL remoto `…/location/fotolocation/<nome>` ricostruito dal
-  file HTML (`estraiLuoghiDaHTML`).
+- **Foto**: ordine di priorità all'import (dal 09/10/2026): (1) la foto
+  della cartella `…_files` del salvataggio «Pagina web, completa»,
+  incorporata come DATA URL 200 px (pulsante «🖼 Cartella foto», input
+  `webkitdirectory`); (2) asset di riserva `assets/ohn-<codice>.jpg` (HEAD
+  con cache:no-store); (3) niente. **L'URL remoto**
+  `…/location/fotolocation/<nome>` NON si usa più: openhousenapoli.org
+  filtra con 403 le richieste senza User-Agent da browser (verificato con
+  curl: 403 senza UA, 200 con UA, «Failed to fetch» dal browser). I data
+  URL viaggiano dentro `mytour-dati-importati-v1` e funzionano offline/PC
+  ↔ mobile via Esporta stato.
 - **Contatori/filtri**: filtro giornata (Tutti · Ven 2 · Sab 3 · Dom 4,
   etichette in index.html), lista ordinata per primo orario nelle viste di
   giorno, orari del solo giorno scelto su card/popup, riepilogo conflitti a

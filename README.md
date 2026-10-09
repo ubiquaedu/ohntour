@@ -66,14 +66,21 @@ Dopo lo sblocco compaiono, **sotto l'header** (raggiungibili anche su mobile):
 - **📄 Importa HTML**: l'unica strada per riempire la lista. La procedura:
   1. sul sito **openhousenapoli.org**, con la tua autenticazione, apri la
      pagina **«My tour»** (i tuoi preferiti);
-  2. salva la pagina dal browser: **Ctrl+S**, tipo **«Pagina web, completa»**;
-  3. nell'app, premi **«📄 Importa HTML»** e scegli quel file appena creato.
-  L'import ha priorità sui dati: aggiorna orari/indirizzi, aggiunge le
-  località nuove e riporta le foto (miniatura locale `assets/ohn-<codice>.jpg`
-  se esiste, altrimenti l'URL della foto sul sito ricostruito dal file).
-  (Non esiste l'«import dal sito»: openhousenapoli.org non consente ad altri
-  siti di leggere le sue pagine dal browser — policy CORS — quindi l'app
-  legge il file che TU salvi, cosa permessa e affidabile.)
+  2. salva la pagina dal browser: **Ctrl+S**, tipo **«Pagina web, completa»**
+     (oltre al file `.html` crea anche una cartella `…_files` con le foto);
+  3. nell'app, premi **«📄 Importa HTML»** e scegli il file `.html`.
+- **🖼 Cartella foto** (opzionale, per le miniature): prima dell'import,
+  premi **«🖼 Cartella foto»** e scegli la cartella `…_files` creata al punto
+  2 — contiene già le foto scaricate dal browser. L'import le ridimensiona
+  (200 px) e le **incorpora nei dati**: nessuna richiesta al sito (che
+  blocca le richieste da altri domini), funziona offline e su mobile.
+  Con l'import successivo le foto si riabbiano anche alle località già
+  presenti (si aggiornano solo quelle senza immagine).
+- **Miniature di riserva**: se esiste `assets/ohn-<codice>.jpg` (codice =
+  numero `l=` della scheda) viene usata quando manca la cartella; per una
+  miniatura manuale: apri la scheda del luogo su openhousenapoli.org,
+  scarica la foto principale, riducila a 200px e salvala come
+  `assets/ohn-<codice>.jpg`.
 - **Posizionamento guidato**: finito l'import, per ogni luogo senza
   coordinate l'app tenta PRIMA la geocodifica Nominatim (indirizzo, poi
   titolo). Solo se non trova nulla chiede il click sulla mappa («clicca il
@@ -132,10 +139,11 @@ Upload assets, trascinare l'intera cartella.
 
 ### Immagini dei luoghi importati
 
-Convenzione: se in `assets/` esiste **`ohn-<codice>.jpg`** (codice = numero
-`l=` della scheda, es. `ohn-490.jpg` per la scheda `location.php?l=490`),
-l'import la aggancia automaticamente al luogo. Se manca, l'import usa
-l'URL della foto sul sito ricostruito dal file HTML. Per una miniatura
-locale: apri la scheda del luogo su openhousenapoli.org, scarica la foto
-principale (`/location/fotolocation/<codice>_*.jpg`), riducila a 200px di
-larghezza e salvala come `assets/ohn-<codice>.jpg`.
+**Ordine di priorità all'import**: (1) la foto della cartella `…_files` del
+salvataggio «Pagina web, completa», incorporata come data URL (200 px);
+(2) l'asset di riserva `assets/ohn-<codice>.jpg`; (3) niente. L'URL remoto
+sul sito OHN non viene mai usato: il server blocca le richieste che non
+arrivano da un browser reale (403) e l'immagine non caricherebbe mai.
+Per una miniatura manuale: apri la scheda del luogo su openhousenapoli.org,
+scarica la foto principale (`/location/fotolocation/<codice>_*.jpg`),
+riducila a 200px di larghezza e salvala come `assets/ohn-<codice>.jpg`.

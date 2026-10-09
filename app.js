@@ -28,6 +28,8 @@ const posizionaSalta = document.getElementById("posizionaSalta");
 const posizionaAnnulla = document.getElementById("posizionaAnnulla");
 const importFileBtn = document.getElementById("importFileBtn");
 const importFileInput = document.getElementById("importFileInput");
+const importFotoBtn = document.getElementById("importFotoBtn");
+const importFotoInput = document.getElementById("importFotoInput");
 const esportaStatoBtn = document.getElementById("esportaStatoBtn");
 const importaStatoBtn = document.getElementById("importaStatoBtn");
 const importaStatoInput = document.getElementById("importaStatoInput");
@@ -247,12 +249,17 @@ function estraiLuoghiDaHTML(testo) {
       quando = nodi.slice(1).join(" | ");
     }
     // foto: nel salvataggio HTML la src è un file locale del browser
-    // («./Open House Napoli - Preferiti_files/490_5188.jpeg»), ma il nome file
-    // è quello del sito: la foto pubblica sta in /location/fotolocation/.
+    // («./Open House Napoli - Preferiti_files/490_5188.jpeg»): il NOME FILE è
+    // quello del sito (il codice davanti è l=`l=` della scheda). Il file
+    // reale sta nella cartella «…_files» che il browser crea con il
+    // salvataggio «Pagina web, completa»: l'utente la seleziona con
+    // «🖼 Cartella foto» e l'import la converte in miniatura incorporata
+    // (data URL). L'URL remoto NON si usa più: openhousenapoli.org filtra
+    // le richieste non-da-browser (403) così nessuna foto carica.
     let foto = null;
     const nomeFoto = (tr.querySelector('a[href*="location.php?l="] img')?.getAttribute("src") ?? "")
       .match(/[\w.-]+\.(?:jpe?g|png|webp)$/i);
-    if (nomeFoto) foto = "https://www.openhousenapoli.org/location/fotolocation/" + nomeFoto[0];
+    if (nomeFoto) foto = nomeFoto[0];
     luoghi_.push({
       codice,
       titolo: titolo.textContent.trim(),
@@ -265,13 +272,19 @@ function estraiLuoghiDaHTML(testo) {
   return luoghi_;
 }
 
-// Geocodifica UN luogo via Nominatim (stessa strategia di geocode.py:
-// countrycodes=it, varianti di ripiego). 1 richiesta/secondo rispettata dal
-// chiamante (await tra un luogo e l'altro). Ritorna {lat, lon} o null.
+// Geocodifica UN luogo via Nominatim (pausa 1,1 s dentro, per il rispetto
+// del limite). Varianti d'indirizzo, in ordine: indirizzo pulito + «Napoli»/
+// «Napoli, Italia», e per i casi di strade senza numero civico la variante
+// senza numero («Via Roma» invece di «Via Roma 12»): aiuta dove il file
+// HTML porta solo la via. Ritorna {lat, lon} o null.
 async function geocodifica(indirizzo) {
   const pulito = (indirizzo ?? "").replace(/\s+/g, " ").trim();
   if (!pulito) return null;
-  const varianti = [pulito + ", Napoli", pulito + ", Napoli, Italia"];
+  // varianti senza civico: «Via Roma 12» → «Via Roma» (utile per i luoghi
+  // importati da HTML dove il numero a volte manca o è annotato in coda)
+  const senzaCivico = pulito.replace(/\s+\d+[\w/]*(\s*,.*)?$/, "$1").trim();
+  const base = senzaCivico && senzaCivico !== pulito ? [pulito, senzaCivico] : [pulito];
+  const varianti = base.flatMap((v) => [v + ", Napoli", v + ", Napoli, Italia"]);
   for (const v of varianti) {
     const url =
       "https://nominatim.openstreetmap.org/search?format=jsonv2&limit=1&countrycodes=it&q=" +
@@ -304,9 +317,10 @@ async function immagineSeEsiste(codice) {
 
 // Applica l'import ai dati base: aggiorna orari/indirizzi dalla fonte, ripristina
 // le tappe cancellate presenti, aggiunge i luoghi nuovi (geocodificati se
-// possibile). Ritorna il riepilogo testuale ({aggiornati, ripristinati, aggiunti,
-// senzaCoord, messaggi: []}).
-async function applicaImport(estrazione) {
+// possibile). fotoPerCodice (opzionale): mappe codice → data URL della
+// miniatura letta dalla cartella «…_files» del salvataggio browser.
+// Ritorna il riepilogo ({aggiornati, aggiunti, senzaCoord, messaggi: []}).
+async function applicaImport(estrazione, fotoPerCodice = new Map()) {
   if (!datiImportati) datiImportati = luoghi.map((l) => ({ ...l }));
   const base = datiImportati;
   const indice = new Map(base.map((l, i) => [normalizzaTitolo(l.title), i]));
@@ -315,29 +329,29 @@ async function applicaImport(estrazione) {
   const senzaCoord = [];
   for (const p of estrazione) {
     const i = indice.get(normalizzaTitolo(p.titolo));
+    // immagine: PRIMA la miniatura incorporata dalla cartella foto (data URL),
+    // poi la riserva assets/ohn-<codice>.jpg; l'URL remoto NON si usa più
+    // (openhousenapoli.org blocca le richieste non-da-browser: 403)
+    const imgNuova = fotoPerCodice.get(p.codice) ?? (await immagineSeEsiste(p.codice));
     if (i !== undefined) {
       const l = base[i];
       if (p.quando && p.quando !== l.when) { l.when = p.quando; aggiornati.push(p.titolo); }
       if (p.indirizzo && p.indirizzo !== l.address) { l.address = p.indirizzo; if (!aggiornati.includes(p.titolo)) aggiornati.push(p.titolo); }
       if (l.url && p.url && l.url !== p.url) l.url = p.url;
-      // immagine mancante (es. luogo importato prima dell'aggiunta del file):
-      // si aggancia l'asset locale se esiste, altrimenti la foto remota letta
-      // dal file HTML
-      if (!l.image) {
-        const img = (await immagineSeEsiste(p.codice)) ?? p.foto;
-        if (img) { l.image = img; if (!aggiornati.includes(p.titolo)) aggiornati.push(p.titolo); }
+      if (imgNuova && l.image !== imgNuova) {
+        l.image = imgNuova;
+        if (!aggiornati.includes(p.titolo)) aggiornati.push(p.titolo);
       }
     } else {
       // luogo nuovo: geocodifica (1,1 s di pausa è dentro geocodifica)
       const coord = await geocodifica(p.indirizzo);
-      const img = (await immagineSeEsiste(p.codice)) ?? p.foto;
       const nuovo = {
         id: "ohn-" + p.codice,
         title: p.titolo,
         address: p.indirizzo,
         when: p.quando,
         url: p.url,
-        ...(img ? { image: img } : {}),
+        ...(imgNuova ? { image: imgNuova } : {}),
         ...(coord ?? {}),
       };
       base.push(nuovo);
@@ -346,12 +360,18 @@ async function applicaImport(estrazione) {
       else { senzaCoord.push(p.titolo); aggiunti.push(p.titolo); }
       // NB: una tappa cancellata per errore e poi reimportata torna con un
       // nuovo id (ohn-<codice>): i dati (orari, indirizzo, url, immagine se
-      // l'asset esiste) tornano dalla fonte/convenzione.
+      // disponibile) tornano dalla fonte/convenzione.
     }
   }
   const messaggi = [];
   if (aggiornati.length) messaggi.push("Orari/indirizzi aggiornati: " + aggiornati.join(", "));
   if (aggiunti.length) messaggi.push("Località aggiunte: " + aggiunti.join(", "));
+  // conteggio solo delle miniature VERAMENTE incorporate (data URL dalla
+  // cartella foto), non degli asset di riserva assets/ohn-<codice>.jpg
+  const incorporate = [...fotoPerCodice.keys()].filter((c) =>
+    base.some((l) => l.id === "ohn-" + c && (l.image ?? "").startsWith("data:"))
+  ).length;
+  if (incorporate) messaggi.push("Miniature incorporate: " + incorporate + " foto dalla cartella");
   if (senzaCoord.length) messaggi.push("⚠ Coordinate non trovate: si riprova con Nominatim (nome del luogo) e poi si chiede il click sulla mappa: " + senzaCoord.join(", "));
   if (!messaggi.length) messaggi.push("Nessuna differenza: i dati sono già allineati alla fonte.");
   salvaImportati();
@@ -1372,6 +1392,53 @@ function riepilogoImport(res) {
 }
 
 importFileBtn.addEventListener("click", () => importFileInput.click());
+importFotoBtn.addEventListener("click", () => importFotoInput.click());
+
+// Cartella foto scelta con «🖼 Cartella foto»: i FILE (già scaricati dal
+// browser nel salvataggio «Pagina web, completa») restano qui finché l'utente
+// preme «📄 Importa HTML», che li consuma e azzera la selezione.
+let fileFotoSelezionati = [];
+importFotoInput.addEventListener("change", () => {
+  const tutti = [...(importFotoInput.files ?? [])];
+  fileFotoSelezionati = tutti.filter((f) => /\.(jpe?g|png|webp)$/i.test(f.name) && /\d+/.test(f.name));
+  if (fileFotoSelezionati.length) {
+    mostraImportMsg
+      ? bannerAutochiudente(`🖼 ${fileFotoSelezionati.length} foto nella cartella: ora premi «📄 Importa HTML».`, 6000)
+      : null;
+  }
+  importFotoInput.value = "";
+});
+
+// Miniatura da file locale: ridimensiona via canvas a 200 px e produce un
+// data URL (l'immagine viaggia dentro i dati dell'import: niente richieste
+// remote, niente 403, funziona offline e su mobile). Ritorna stringa o null.
+function miniaturaDaFile(file, codice) {
+  return new Promise((resolve) => {
+    // match nome file → codice scheda: «490_5188.jpeg» → 490 (i file della
+    // cartella _files portano il codice davanti, come sul sito)
+    if (!file || !file.name.startsWith(codice + "_")) return resolve(null);
+    const url = URL.createObjectURL(file);
+    const img = new Image();
+    img.onload = () => {
+      URL.revokeObjectURL(url);
+      try {
+        const scala = Math.min(1, 200 / img.naturalWidth);
+        const canvas = document.createElement("canvas");
+        canvas.width = Math.round(img.naturalWidth * scala);
+        canvas.height = Math.round(img.naturalHeight * scala);
+        canvas.getContext("2d").drawImage(img, 0, 0, canvas.width, canvas.height);
+        resolve(canvas.toDataURL("image/jpeg", 0.72));
+      } catch {
+        resolve(null);
+      }
+    };
+    img.onerror = () => {
+      URL.revokeObjectURL(url);
+      resolve(null);
+    };
+    img.src = url;
+  });
+}
 
 importFileInput.addEventListener("change", async () => {
   const file = importFileInput.files?.[0];
@@ -1389,10 +1456,12 @@ importFileInput.addEventListener("change", async () => {
     );
     return;
   }
+  const conFoto = fileFotoSelezionati.length > 0;
   if (
     !confirm(
-      "Importare " + estrazione.length + " località dal file «" + file.name + "»?\n\n" +
-        "- orari e indirizzi vengono allineati alla fonte\n" +
+      "Importare " + estrazione.length + " località dal file «" + file.name + "»?" +
+        (conFoto ? "\n(con " + fileFotoSelezionati.length + " foto dalla cartella: diventano miniature incorporate)" : "") +
+        "\n\n- orari e indirizzi vengono allineati alla fonte\n" +
         "- le località nuove vengono geocodificate (Nominatim, poi click sulla mappa)\n" +
         "- le tappe cancellate per errore tornano nell'elenco"
     )
@@ -1400,9 +1469,19 @@ importFileInput.addEventListener("change", async () => {
     return;
   mostraImportMsg("Import in corso (geocodifica dei luoghi nuovi: fino a ~2 s ciascuno)…");
   try {
-    riepilogoImport(await applicaImport(estrazione));
+    const fotoPerCodice = new Map();
+    for (const p of estrazione) {
+      if (!p.foto) continue;
+      const fileFoto = fileFotoSelezionati.find((f) => f.name === p.foto);
+      if (!fileFoto) continue;
+      const dataUrl = await miniaturaDaFile(fileFoto, p.codice);
+      if (dataUrl) fotoPerCodice.set(p.codice, dataUrl);
+    }
+    riepilogoImport(await applicaImport(estrazione, fotoPerCodice));
   } catch (e) {
     mostraImportMsg("Errore durante l'import: " + e.message, "err");
+  } finally {
+    fileFotoSelezionati = []; // le foto si consumano con l'import
   }
 });
 
