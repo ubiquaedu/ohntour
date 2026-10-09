@@ -26,7 +26,6 @@ const posizionaBanner = document.getElementById("posizionaBanner");
 const posizionaTesto = document.getElementById("posizionaTesto");
 const posizionaSalta = document.getElementById("posizionaSalta");
 const posizionaAnnulla = document.getElementById("posizionaAnnulla");
-const importSitoBtn = document.getElementById("importSitoBtn");
 const importFileBtn = document.getElementById("importFileBtn");
 const importFileInput = document.getElementById("importFileInput");
 const esportaStatoBtn = document.getElementById("esportaStatoBtn");
@@ -194,15 +193,13 @@ function salvaScelte() {
 }
 
 // ---------- IMPORT: fonte primaria dei dati ----------
-// Due strade che convergono su applicaImport():
-//  - «🌐 Importa dal sito»: fetch di preferiti.php (funziona solo nel browser
-//    in cui si è fatto l'accesso a Open House; se il sito blocca il CORS si
-//    segnala e resta l'altra via);
-//  - «📄 Importa HTML»: il file «My tour» salvato come HTML.
+// UNA SOLA STRADE, «📄 Importa HTML»: il file «My tour» salvato come HTML.
+// (Il vecchio «🌐 Importa dal sito» è stato tolto: openhousenapoli.org non
+// manda gli header CORS, quindi il browser blocca la lettura della pagina
+// da myohntour.pages.dev — la sessione non c'entra, è la same-origin policy.
+// Per l'utente: salva la pagina «My tour» dal browser e importala qui.)
 // L'import ha PRIORITÀ sui dati interni: aggiorna orari/indirizzi, ripristina
 // le tappe cancellate per errore e aggiunge le località nuove (geocodificate).
-
-const PREF_DIRETTI = "https://www.openhousenapoli.org/location/preferiti.php";
 
 // normalizzazione per il match: maiuscole, niente accenti/punteggiatura
 // (stessa strategia di _strumenti/importa_preferiti.py)
@@ -1345,11 +1342,6 @@ function aggiornaAdminUI() {
 }
 
 // ---------- import: fonte primaria dei dati ----------
-// Due strade che convergono su applicaImport():
-//  - «🌐 Importa dal sito»: fetch dei preferiti direttamente da
-//    openhousenapoli.org (funziona solo se il browser è già autenticato lì;
-//    da Cloudflare Pages la risposta del sito non porta header CORS → messaggio
-//    di errore chiaro, usare «📄 Importa HTML»).
 //  - «📄 Importa HTML»: il file «My tour» salvato come HTML dal browser.
 // Risultato: aggiorna orari/indirizzi, ripristina tappe cancellate per errore,
 // aggiunge località nuove (geocodificate via Nominatim).
@@ -1379,36 +1371,6 @@ function riepilogoImport(res) {
   }
 }
 
-importSitoBtn.addEventListener("click", async () => {
-  importSitoBtn.disabled = true;
-  mostraImportMsg("Scarico i preferiti da openhousenapoli.org…");
-  try {
-    const r = await fetch(PREF_DIRETTI, { credentials: "include" });
-    if (!r.ok) throw new Error("HTTP " + r.status);
-    const testo = await r.text();
-    const estrazione = estraiLuoghiDaHTML(testo);
-    if (!estrazione.length) {
-      mostraImportMsg(
-        "La pagina scaricata non contiene luoghi: probabilmente non sei autenticato su openhousenapoli.org in questa finestra (nessun «My tour» con preferiti). Prova con «📄 Importa HTML».",
-        "err"
-      );
-      return;
-    }
-    riepilogoImport(await applicaImport(estrazione));
-  } catch (e) {
-    mostraImportMsg(
-      "Impossibile leggere i preferiti dal sito (" +
-        (e.name === "TypeError"
-          ? "richiesta bloccata: openhousenapoli.org non consente richieste da questo dominio (CORS)"
-          : e.message) +
-        "). Usa «📄 Importa HTML» con il file «My tour» salvato dal browser.",
-      "err"
-    );
-  } finally {
-    importSitoBtn.disabled = false;
-  }
-});
-
 importFileBtn.addEventListener("click", () => importFileInput.click());
 
 importFileInput.addEventListener("change", async () => {
@@ -1419,7 +1381,10 @@ importFileInput.addEventListener("change", async () => {
   const estrazione = estraiLuoghiDaHTML(testo);
   if (!estrazione.length) {
     mostraImportMsg(
-      "Nessun luogo riconosciuto nel file: deve essere la pagina «My tour» di openhousenapoli.org salvata come HTML.",
+      "Nessun luogo riconosciuto nel file «" + file.name + "». La procedura corretta:\n" +
+        "1) sul sito openhousenapoli.org, autenticato, apri la pagina «My tour» (i tuoi preferiti);\n" +
+        "2) salva la pagina dal browser: Ctrl+S → tipo «Pagina web, completa»;\n" +
+        "3) qui premi «📄 Importa HTML» e scegli quel file.",
       "err"
     );
     return;
@@ -1428,7 +1393,7 @@ importFileInput.addEventListener("change", async () => {
     !confirm(
       "Importare " + estrazione.length + " località dal file «" + file.name + "»?\n\n" +
         "- orari e indirizzi vengono allineati alla fonte\n" +
-        "- le località nuove vengono geocodificate (1 richiesta/secondo)\n" +
+        "- le località nuove vengono geocodificate (Nominatim, poi click sulla mappa)\n" +
         "- le tappe cancellate per errore tornano nell'elenco"
     )
   )

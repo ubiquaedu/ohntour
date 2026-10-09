@@ -63,13 +63,17 @@ poi apri http://localhost:8123/ — oppure con l'estensione Live Server di VS Co
 
 Dopo lo sblocco compaiono, **sotto l'header** (raggiungibili anche su mobile):
 
-- **🌐 Importa dal sito**: scarica i preferiti direttamente da
-  openhousenapoli.org (richiede l'accesso già fatto in quella finestra; se il
-  sito blocca il CORS si segnala e si usa l'import HTML).
-- **📄 Importa HTML**: legge il file «My tour» salvato come HTML dal browser.
+- **📄 Importa HTML**: l'unica strada per riempire la lista. La procedura:
+  1. sul sito **openhousenapoli.org**, con la tua autenticazione, apri la
+     pagina **«My tour»** (i tuoi preferiti);
+  2. salva la pagina dal browser: **Ctrl+S**, tipo **«Pagina web, completa»**;
+  3. nell'app, premi **«📄 Importa HTML»** e scegli quel file appena creato.
   L'import ha priorità sui dati: aggiorna orari/indirizzi, aggiunge le
   località nuove e riporta le foto (miniatura locale `assets/ohn-<codice>.jpg`
   se esiste, altrimenti l'URL della foto sul sito ricostruito dal file).
+  (Non esiste l'«import dal sito»: openhousenapoli.org non consente ad altri
+  siti di leggere le sue pagine dal browser — policy CORS — quindi l'app
+  legge il file che TU salvi, cosa permessa e affidabile.)
 - **Posizionamento guidato**: finito l'import, per ogni luogo senza
   coordinate l'app tenta PRIMA la geocodifica Nominatim (indirizzo, poi
   titolo). Solo se non trova nulla chiede il click sulla mappa («clicca il

@@ -16,8 +16,8 @@
 - **Layout**: header con ricerca e campo 🔒 password; **#adminBar** subito
   sotto (nascosta fino allo sblocco); sotto, griglia PC **mappa a sinistra,
   lista a destra** (mobile: mappa sopra, lista sotto, pagina che scrolla).
-- **Strumenti admin** (password «26», campo 🔒): 🌐 Importa dal sito ·
-  📄 Importa HTML · ⬇ Esporta stato · ⬆ Importa stato · 🗑 Svuota dati.
+- **Strumenti admin** (password «26», campo 🔒): 📄 Importa HTML ·
+  ⬇ Esporta stato · ⬆ Importa stato · 🗑 Svuota dati.
 - **Posizionamento guidato**: finito l'import, per ogni luogo senza
   coordinate l'app tenta PRIMA Nominatim (`riprovaGeocodifica`: indirizzo,
   poi titolo). Solo se fallisce: banner «clicca il punto esatto» con
@@ -77,11 +77,18 @@ Chiavi vecchie NON più usate: `mytour-scelte-v1` (globale),
 
 ## Import (dettagli implementativi)
 
-- Due strade che convergono su `applicaImport(estrazione)`:
-  1. **🌐 Importa dal sito**: fetch `preferiti.php` con `credentials:"include"`
-     — solo da browser autenticato su openhousenapoli.org; CORS può bloccare
-     (messaggio esplicativo e si usa l'import HTML).
-  2. **📄 Importa HTML**: parser `estraiLuoghiDaHTML` (per ogni `<tr>`:
+- **📄 Importa HTML** è l'unica strada (dal 09/10/2026): il vecchio «🌐
+  Importa dal sito» (fetch di `preferiti.php` con `credentials:"include"`)
+  è stato RIMOSSO — openhousenapoli.org non manda header CORS, quindi da
+  myohntour.pages.dev (e da qualunque altro dominio) il browser blocca la
+  lettura della risposta stessa se la sessione è valida: la
+  same-origin policy decide in base all'ORIGINE che chiede, non alla
+  sessione. La via affidabile: l'utente salva la pagina «My tour» dal
+  browser (Ctrl+S, «Pagina web, completa») e l'app la legge da file
+  (lettura permessa perché il file è scelto esplicitamente dall'utente).
+  Il flusso è documentato nel title del pulsante, nel messaggio d'errore
+  «nessun luogo riconosciuto» e nel README.
+- Parser `estraiLuoghiDaHTML` (per ogni `<tr>`:
      `<b>` titolo + link `location.php?l=<n>` che lo CONTIENE; indirizzo e
      orari dai segmenti separati da `<br>`; foto dal nome file della src
      locale). Match per `normalizzaTitolo` (NFD, niente accenti, uppercase).
