@@ -6,3 +6,6 @@ mytour.png
 
 # Salvataggi HTML importati (la copia fresca sta nei Download dell'utente)
 _strumenti/*.html
+
+# Log del server locale di sviluppo (non parte del sito né del repo)
+server-8123.log

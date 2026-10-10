@@ -38,6 +38,7 @@ const esportaStatoBtn = document.getElementById("esportaStatoBtn");
 const importaStatoBtn = document.getElementById("importaStatoBtn");
 const importaStatoInput = document.getElementById("importaStatoInput");
 const svuotaDatiBtn = document.getElementById("svuotaDatiBtn");
+const importStatoEl = document.getElementById("importStato");
 const adminPassEl = document.getElementById("adminPass");
 
 const STORAGE_KEY = "mytour-mappa-correzioni-v1";
@@ -277,18 +278,30 @@ function estraiLuoghiDaHTML(testo) {
 }
 
 // Geocodifica UN luogo via Nominatim (pausa 1,1 s dentro, per il rispetto
-// del limite). Varianti d'indirizzo, in ordine: indirizzo pulito + «Napoli»/
-// «Napoli, Italia», e per i casi di strade senza numero civico la variante
-// senza numero («Via Roma» invece di «Via Roma 12»): aiuta dove il file
-// HTML porta solo la via. Ritorna {lat, lon} o null.
-async function geocodifica(indirizzo) {
+// del limite). Ordine delle varianti (rilevato dai casi reali):
+//  1) INDIRIZZO PURO (con civico → senza civico) + «Napoli»: Nominatim trova
+//     il civico SOLO senza il titolo davanti (es. «Palazzo …, Via Santa
+//     Teresa degli Scalzi, 76» non trovato, ma «Via Santa Teresa degli
+//     Scalzi 76» sì — caso Danilo Ambrosino);
+//  2) TITOLO intero + «Napoli» (toponimi: «Palazzo…», chiese);
+//  3) PAROLE CHIAVE del TITOLO da sole («Disciplina», «Santa Croce»…):
+//     i titoli OHN differiscono leggermente dai nomi su OSM.
+// Ritorna {lat, lon} o null.
+async function geocodifica(indirizzo, titolo = "") {
   const pulito = (indirizzo ?? "").replace(/\s+/g, " ").trim();
-  if (!pulito) return null;
+  if (!pulito && !titolo) return null;
   // varianti senza civico: «Via Roma 12» → «Via Roma» (utile per i luoghi
   // importati da HTML dove il numero a volte manca o è annotato in coda)
   const senzaCivico = pulito.replace(/\s+\d+[\w/]*(\s*,.*)?$/, "$1").trim();
   const base = senzaCivico && senzaCivico !== pulito ? [pulito, senzaCivico] : [pulito];
-  const varianti = base.flatMap((v) => [v + ", Napoli", v + ", Napoli, Italia"]);
+  // il TITOLO non va DAVANTI all'indirizzo (Nominatim si inceppa su nomi
+  // assenti in OSM, es. «Palazzo … Albertini di Cimitile, Via …»): query
+  // distinte, prima tutti gli indirizzi poi toponimi.
+  const varianti = [
+    ...base.flatMap((v) => [v + ", Napoli", v + ", Napoli, Italia"]),
+    ...(titolo ? [titolo.trim() + ", Napoli"] : []),
+    ...(titolo ? paroleChiaveTitolo(titolo).map((t) => t + ", Napoli") : []),
+  ].filter(Boolean);
   for (const v of varianti) {
     const url =
       "https://nominatim.openstreetmap.org/search?format=jsonv2&limit=1&countrycodes=it&q=" +
@@ -303,6 +316,27 @@ async function geocodifica(indirizzo) {
     await new Promise((res) => setTimeout(res, 1100)); // pausa Nominatim
   }
   return null;
+}
+
+// token generici del titolo da NON usare da soli come query geocodifica
+const TOKEN_GENERICI = new Set([
+  "palazzo","villa","chiesa","museo","biblioteca","teatro","galleria",
+  "istituto","accademia","fondazione","napoli","via","piazza","courtyard",
+  "strada", "salita", "vico", "vicolo", "borgo"
+]);
+
+// parole chiave geografiche di un titolo («Arciconfraternita della
+// Compagnia della Disciplina della Santa Croce» → «Disciplina», «Santa
+// Croce» → query «Disciplina, Napoli», ecc.). Token ≥ 5 lettere, generici
+// esclusi, uno per query (max 4).
+function paroleChiaveTitolo(titolo) {
+  const base = (titolo ?? "")
+    .replace(/\[[^\]]*\]/g, " ") // niente parentesi
+    .normalize("NFD").replace(/[\u0300-\u036f]/g, "") // niente accenti
+    .toLowerCase();
+  const tokens = [...base.matchAll(/[a-z]{5,}/g)].map((m) => m[0]);
+  const STOP = new Set(["della","del","dei","delle","degli","degli","di","compagnia","arciconfraternita","citt","napoletana"]);
+  return [...new Set(tokens.filter((t) => !TOKEN_GENERICI.has(t) && !STOP.has(t)))].slice(0, 4);
 }
 
 // Immagine dei luoghi importati: convenzione assets/ohn-<codice>.jpg. Il file
@@ -349,7 +383,7 @@ async function applicaImport(estrazione, fotoPerCodice = new Map()) {
       }
     } else {
       // luogo nuovo: geocodifica (1,1 s di pausa è dentro geocodifica)
-      const coord = await geocodifica(p.indirizzo);
+      const coord = await geocodifica(p.indirizzo, p.titolo);
       const nuovo = {
         id: "ohn-" + p.codice,
         title: p.titolo,
@@ -376,7 +410,7 @@ async function applicaImport(estrazione, fotoPerCodice = new Map()) {
   const incorporate = [...fotoPerCodice.keys()].filter((c) =>
     base.some((l) => l.id === "ohn-" + c && (l.image ?? "").startsWith("data:"))
   ).length;
-  if (incorporate) messaggi.push("Miniature incorporate: " + incorporate + " foto dalla cartella");
+  if (incorporate) messaggi.push("Miniature incorporate: " + incorporate + " immagini dalla cartella (− 3 icone del sito)");
   if (senzaCoord.length) messaggi.push("⚠ Coordinate non trovate: "+ senzaCoord.join(", ") + "\n→ usa 🎯 sulla card per posizionarli dalla lista (prima si riprova Nominatim)");
   if (!messaggi.length) messaggi.push("Nessuna differenza: i dati sono già allineati alla fonte.");
   salvaImportati();
@@ -1328,9 +1362,9 @@ function applicaCoordinate(id, lat, lon) {
 async function riprovaGeocodifica(id) {
   const l = datiCompleti().find((x) => x.id === id);
   if (!l) return false;
-  const candidati = [campo(l, "address"), campo(l, "title")].filter(Boolean);
-  for (const candidato of candidati) {
-    const coord = await geocodifica(candidato);
+  const candidati = [[campo(l, "address"), campo(l, "title")], [null, campo(l, "title")]].filter((c) => c[0] || c[1]);
+  for (const [ind, tit] of candidati) {
+    const coord = await geocodifica(ind, tit);
     if (coord) {
       applicaCoordinate(id, coord.lat, coord.lon);
       return true;
@@ -1372,13 +1406,16 @@ function aggiornaAdminUI() {
 // aggiunge località nuove (geocodificate via Nominatim).
 
 function mostraImportMsg(testo, tipo = "ok") {
+  // riga di stato sotto i pulsanti nella barra admin (richiesta: il messaggio
+  // galleggiante sopra la mappa era di difficile lettura). Gli errori restano
+  // visibili finché l'utente non riparte; i messaggi normali pure.
   if (tipo === "err") {
     bannerRiepilogo = "";
     fermaPosizionamento();
-    bannerAutochiudente("⚠ " + testo, 12000);
-  } else {
-    mostraBanner(testo, false);
   }
+  importStatoEl.hidden = false;
+  importStatoEl.textContent = (tipo === "err" ? "⚠ " : "⏳ ") + testo;
+  importStatoEl.classList.toggle("stato-err", tipo === "err");
 }
 
 function riepilogoImport(res) {
@@ -1387,12 +1424,11 @@ function riepilogoImport(res) {
   bannerRiepilogo = res.messaggi.join("\n");
   // niente coda di posizionamento automatica (richiesta: l'import non deve
   // aspettare la mappa): si segnala SOLO chi non è stato trovato, il "+ usa
-  // 🎯" indica che si posiziona poi dalla lista, a ritmo dell'utente
-  bannerAutochiudente(
-    bannerRiepilogo +
-      "\n🎯 I luoghi ⚠ si posizionano poi dalla lista: pulsante 🎯 sulla loro card.",
-    12000
-  );
+  // 🎯" indica che si posiziona poi dalla lista, a ritmo dell'utente.
+  // Il riepilogo va nella riga di stato sotto i pulsanti (tested: leggere).
+  importStatoEl.hidden = false;
+  importStatoEl.textContent = "ℹ️ " + bannerRiepilogo + "\n🎯 I luoghi ⚠ si posizionano poi dalla lista: pulsante 🎯 sulla loro card.";
+  importStatoEl.classList.remove("stato-err");
   bannerRiepilogo = "";
 }
 
@@ -1411,7 +1447,7 @@ importFotoInput.addEventListener("change", () => {
   importFotoInput.value = ""; // riscegliere la stessa cartella: riparte l'evento
   aggiornaZoneImport();
   if (fileFotoSelezionati.length)
-    bannerAutochiudente(`🖼 ${fileFotoSelezionati.length} foto nella cartella: ora scegli il file HTML e premi «⬇ Esegui import».`, 6000);
+    bannerAutochiudente(`🖼 ${fileFotoSelezionati.length - 3} immagini nella cartella (− 3 icone del sito): ora premi «⬇ Esegui import» (il file HTML va scelto prima).`, 6000);
 });
 
 // Zona 2 (fondamentale): il file .html di «My tour». NON lo si consuma subito:
@@ -1427,7 +1463,7 @@ importFileInput.addEventListener("change", () => {
 function aggiornaZoneImport() {
   zonaFotoEl.classList.toggle("piena", fileFotoSelezionati.length > 0);
   zonaFotoTestoEl.textContent = fileFotoSelezionati.length
-    ? `✅ ${fileFotoSelezionati.length} foto pronte`
+    ? `✅ ${fileFotoSelezionati.length - 3} immagini pronte (− 3 icone)`
     : "nessuna cartella scelta (import senza miniature)";
   zonaFileEl.classList.toggle("piena", !!fileHtmlSelezionato);
   zonaFileTestoEl.textContent = fileHtmlSelezionato
@@ -1481,8 +1517,19 @@ eseguiImportBtn.addEventListener("click", async () => {
   await eseguiImport(fileHtmlSelezionato);
 });
 
-// import del file .html (con o senza cartella foto): estrazione, conferma,
-// abbinamento foto → data URL, applicaImport e riepilogo SOLO avvisi 🎯.
+// import del file .html (con o senza cartella immagini): estrazione, conferma,
+// abbinamento immagini → data URL, applicaImport e riepilogo SOLO avvisi 🎯.
+
+// Stima «fino a ~N sec.» per la geocodifica: ogni richiesta a Nominatim rispetta
+// la pausa di 1,1 s; per ogni luogo MANCANTE di coordinate si provano fino a
+// 4 varianti d'indirizzo (2 basi × 2 suffissi) = fino a ~4,4 s ciascuno; per i
+// luoghi già posizionati nessun tentativo. La stima è il caso peggiore.
+function stimaSecondiGeocodifica(estrazione) {
+  const dati = datiImportati ?? luoghi;
+  const titoli = new Set(dati.map((l) => normalizzaTitolo(l.title)));
+  const daGeocodificare = estrazione.filter((p) => !titoli.has(normalizzaTitolo(p.titolo))).length;
+  return Math.max(4.4, daGeocodificare * 4.4);
+}
 async function eseguiImport(file) {
   const testo = await file.text();
   const estrazione = estraiLuoghiDaHTML(testo);
@@ -1500,8 +1547,8 @@ async function eseguiImport(file) {
   if (
     !confirm(
       "Importare " + estrazione.length + " località dal file «" + file.name + "»?" +
-        (conFoto ? "\n(con " + fileFotoSelezionati.length + " foto dalla cartella: diventano miniature incorporate)"
-                 : "\n(senza cartella foto: luoghi senza miniature)" ) +
+        (conFoto ? "\n(con " + (fileFotoSelezionati.length - 3) + " immagini dalla cartella (− 3 icone del sito): diventano miniature incorporate)"
+                 : "\n(senza cartella immagini: luoghi senza miniature)" ) +
         "\n\n- orari e indirizzi vengono allineati alla fonte\n" +
         "- le località nuove vengono geocodificate (Nominatim, poi click sulla mappa)\n" +
         "- le tappe cancellate per errore tornano nell'elenco\n" +
@@ -1509,7 +1556,7 @@ async function eseguiImport(file) {
     )
   )
     return;
-  mostraImportMsg("Import in corso (geocodifica dei luoghi nuovi: fino a ~2 s ciascuno)…");
+  mostraImportMsg("Import in corso (geocodifica dei luoghi nuovi: fino a ~" + stimaSecondiGeocodifica(estrazione) + " sec.)…");
   try {
     const fotoPerCodice = new Map();
     for (const p of estrazione) {

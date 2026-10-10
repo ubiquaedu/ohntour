@@ -16,16 +16,23 @@
 - **Layout**: header con ricerca e campo 🔒 password; **#adminBar** subito
   sotto (nascosta fino allo sblocco); sotto, griglia PC **mappa a sinistra,
   lista a destra** (mobile: mappa sopra, lista sotto, pagina che scrolla).
-- **Strumenti admin** (password «26», campo 🔒): zona 🖼 Cartella foto
-  (opzionale) · zona 📄 File HTML · ⬇ Esegui import · ⬇ Esporta stato ·
+
+- **Strumenti admin** (password «26», campo 🔒, stato 10/10/2026):
+  istruzione in TESTO SEMPLICE (a capo, senza box) · zona 📄 File HTML «My
+  tour» · zona 🖼 Cartella immagini (OPZIONALE, seconda) · ⬇ Esegui import ·
+  riga di stato `#importStato` sotto i pulsanti · ⬇ Esporta stato ·
   ⬆ Importa stato · 🗑 Svuota dati.
 - **Posizionamento a ritmo dell'utente**: finito l'import, avviso con i
   luoghi senza coordinate (NESSUNA coda automatica: l'import non aspetta la
   mappa). Per ogni luogo, il pulsante 🎯 sulla card tenta PRIMA Nominatim
-  (`riprovaGeocodifica`: indirizzo, poi titolo). Solo se fallisce: banner
-  «clicca il punto esatto» con Salta/Annulla (Esc). I rimasti in
-  sospeso: in fondo alla lista con
+  (`riprovaGeocodifica`: indirizzo puro con/senza civico, poi titolo, poi
+  parole chiave del titolo una per una — vedi «Geocodifica a strati» nel
+  README). Solo se fallisce: banner «clicca il punto esatto» con
+  Salta/Annulla (Esc). I rimasti in sospeso: in fondo alla lista con
   🎯 Posiziona (bordo arancio). Coordinate = correzione `correzioni[id]`.
+- **Messaggi import nella riga di stato** (richiesta: il banner flottante
+  era di difficile lettura): `#importStato` dentro `#adminBar`, tooltip
+  errori rossi (`stato-err`), riepilogo con avviso ⚠ e istruzione 🎯.
 - **Segnalibri per giornata** («tour personale»): solo nelle viste di
   giorno; `mytour-scelte-per-giorno-v1`; contatore e «↺ Reset segnalibri»
   (solo nelle viste di giorno, nascosto in «Tutti»).
@@ -116,10 +123,15 @@ Chiavi vecchie NON più usate: `mytour-scelte-v1` (globale),
      `<b>` titolo + link `location.php?l=<n>` che lo CONTIENE; indirizzo e
      orari dai segmenti separati da `<br>`; foto dal nome file della src
      locale). Match per `normalizzaTitolo` (NFD, niente accenti, uppercase).
-- Luoghi nuovi: geocodifica `geocodifica()` (Nominatim, 2 varianti «, Napoli»
-  / «, Napoli, Italia», countrycodes=it, pausa 1100 ms). Import da file
-  reale: 26 luoghi (2 nuovi: l=490 geocodificato, l=502 senza coordinate —
-  poi posizionato a mano).
+- Luoghi nuovi: geocodifica `geocodifica()` (Nominatim, countrycodes=it,
+  pausa 1100 ms; 10/10/2026 RISCRITTA «a strati»: 1) indirizzo puro con e
+  senza civico — il TITOLO davanti all'indirizzo fa perdere il civico
+  (caso Danilo Ambrosino / Palazzo Albertini, Via Santa Teresa degli
+  Scalzi 76); 2) titolo intero; 3) `paroleChiaveTitolo()` una per query
+  (token ≥5 lettere, generici e termini tipo «della/compagnia» esclusi,
+  max 4) — risolve i titoli che differiscono dai nomi OSM (Arciconfrat.
+  della Disciplina della Santa Croce). Import da file reale: 26 luoghi,
+  tutti geocodificati automaticamente in verifica.
 - Import = aggiorna when/address, aggiunge i nuovi, RIATTACCA le foto
   mancanti; non rimuove mai nulla.
 

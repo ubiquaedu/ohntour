@@ -25,22 +25,22 @@
   <!-- Strumenti admin: appaiono dopo lo sblocco con password (o ?impostazioni=1).
        Sotto l'header (richiesta: raggiungibili anche da mobile senza scroll). -->
   <div id="adminBar" hidden>
-    <!-- import a due zone: la foto è OPZIONALE ma sta DOPO il file (richiesta);
-         sopra le due zone un'istruzione finta-pulsante reca la procedura di
-         salvataggio «My tour» dal sito (il salvataggio crea .html + cartella). -->
-    <span class="import-istruzione" title="Sul sito openhousenapoli.org, autenticato, apri la pagina «My tour» (i tuoi preferiti) e salvala in formato HTML (Ctrl+S o Salva con nome, tipo «Pagina web, completa»): crea il file .html + una cartella «…_files» con le foto.">ℹ️ Salvare My tour dal sito Open House Napoli (Salva con nome in formato HTML o con Ctrl+S)</span>
+    <!-- import a due zone: la cartella immagini è OPZIONALE ma sta DOPO il
+         file (richiesta); sopra le due zone un'istruzione in TESTO SEMPLICE
+         (a capo, senza box) reca la procedura di salvataggio «My tour». -->
+    <p class="import-istruzione">Salvare My tour dal sito Open House Napoli<br>(Salva con nome in formato HTML o con Ctrl+S)</p>
     <label class="import-zona" id="zonaFile" title="1) SUL SITO OHN apri «My tour» (preferiti) e salva la pagina in formato HTML (Ctrl+S o «Salva con nome», tipo «Pagina web, completa») — crea il file .html + una cartella «…_files» con le foto. 2) QUI scegli il file .html (la cartella, qui sotto, è opzionale e serve solo per le miniature). Aggiorna orari/indirizzi, ripristina le tappe cancellate e aggiunge le località nuove.">
       <span class="zona-intestazione">📄 File HTML «My tour»</span>
       <span id="zonaFileTesto" class="zona-valore">nessun file scelto</span>
       <input id="importFileInput" type="file" accept=".html,.htm" hidden />
     </label>
-    <label class="import-zona" id="zonaFoto" title="OPZIONALE, per le miniature: scegli la cartella «Pagina web, completa _files» creata dal salvataggio della pagina (contiene già le foto scaricate dal browser). L'app le ridimensiona e le incorpora nei dati. Dato che si possono saltare: import valido anche senza cartella.">
-      <span class="zona-intestazione">🖼 Cartella foto <em>opzionale</em> — la cartella «…_files» del salvataggio</span>
+    <label class="import-zona" id="zonaFoto" title="OPZIONALE, per le miniature: scegli la cartella creata dal salvataggio della pagina (contiene le immagini scaricate dal browser; 3 sono icone del sito). L'app le ridimensiona e le incorpora nei dati. Dato che si può saltare: import valido anche senza cartella.">
+      <span class="zona-intestazione">🖼 Cartella immagini <em>opzionale</em></span>
       <span id="zonaFotoTesto" class="zona-valore">nessuna cartella scelta (import senza miniature)</span>
       <input id="importFotoInput" type="file" webkitdirectory hidden />
     </label>
     <button id="eseguiImportBtn" class="btn btn-small" type="button" disabled
-      title="Parte l'import con le selezioni sopra: il file HTML è il minimo indispensabile, la cartella foto è opzionale (niente cartella = luoghi senza miniature).">⬇ Esegui import</button>
+      title="Parte l'import con le selezioni sopra: il file HTML è il minimo indispensabile, la cartella immagini è opzionale (niente cartella = luoghi senza miniature).">⬇ Esegui import</button>
     <button id="esportaStatoBtn" class="btn btn-ghost btn-small" type="button"
       title="Scarica un JSON con dati importati, correzioni, esclusioni e scelte — per trasferirli su un altro dispositivo">⬇ Esporta stato</button>
     <button id="importaStatoBtn" class="btn btn-ghost btn-small" type="button"
@@ -48,6 +48,7 @@
     <input id="importaStatoInput" type="file" accept=".json" hidden />
     <button id="svuotaDatiBtn" class="btn btn-ghost btn-small" type="button"
       title="Cancella TUTTI i dati locali (dati importati, correzioni, segnalibri, esclusioni): l'app riparte vuota, pronta per l'import della nuova edizione">🗑 Svuota dati</button>
+    <span id="importStato" class="import-stato" hidden></span>
   </div>
 
   <main class="layout">
@@ -94,6 +95,6 @@
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
   <!-- v=2 in query: la modifica a app.js non si vede finché la cache Edge non scade;
        si aumenta a ogni rilascio comportamentale (veste nota in AGENTS.md) -->
-  <script type="module" src="app.js?v=2"></script>
+  <script type="module" src="app.js?v=3"></script>
 </body>
 </html>
