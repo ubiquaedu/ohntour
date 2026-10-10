@@ -410,7 +410,7 @@ async function applicaImport(estrazione, fotoPerCodice = new Map()) {
   const incorporate = [...fotoPerCodice.keys()].filter((c) =>
     base.some((l) => l.id === "ohn-" + c && (l.image ?? "").startsWith("data:"))
   ).length;
-  if (incorporate) messaggi.push("Miniature incorporate: " + incorporate + " immagini dalla cartella (− 3 icone del sito)");
+  if (incorporate) messaggi.push("Miniature incorporate: " + incorporate + " immagini dalla cartella");
   if (senzaCoord.length) messaggi.push("⚠ Coordinate non trovate: "+ senzaCoord.join(", ") + "\n→ usa 🎯 sulla card per posizionarli dalla lista (prima si riprova Nominatim)");
   if (!messaggi.length) messaggi.push("Nessuna differenza: i dati sono già allineati alla fonte.");
   salvaImportati();
@@ -1447,7 +1447,7 @@ importFotoInput.addEventListener("change", () => {
   importFotoInput.value = ""; // riscegliere la stessa cartella: riparte l'evento
   aggiornaZoneImport();
   if (fileFotoSelezionati.length)
-    bannerAutochiudente(`🖼 ${fileFotoSelezionati.length - 3} immagini nella cartella (− 3 icone del sito): ora premi «⬇ Esegui import» (il file HTML va scelto prima).`, 6000);
+    bannerAutochiudente(`🖼 ${fileFotoSelezionati.length - 3} immagini nella cartella: ora premi «⬇ Esegui import» (il file HTML va scelto prima).`, 6000);
 });
 
 // Zona 2 (fondamentale): il file .html di «My tour». NON lo si consuma subito:
@@ -1520,15 +1520,22 @@ eseguiImportBtn.addEventListener("click", async () => {
 // import del file .html (con o senza cartella immagini): estrazione, conferma,
 // abbinamento immagini → data URL, applicaImport e riepilogo SOLO avvisi 🎯.
 
-// Stima «fino a ~N sec.» per la geocodifica: ogni richiesta a Nominatim rispetta
-// la pausa di 1,1 s; per ogni luogo MANCANTE di coordinate si provano fino a
-// 4 varianti d'indirizzo (2 basi × 2 suffissi) = fino a ~4,4 s ciascuno; per i
-// luoghi già posizionati nessun tentativo. La stima è il caso peggiore.
+// Stima del tempo di geocodifica da mostrare all'utente: viene formattata in
+// MINUTI E SECONDI leggibili (mai decimali tipo «118.80000000000001»);
+// ~2 s per luogo (la prima variante, indirizzo puro, trova subito).
 function stimaSecondiGeocodifica(estrazione) {
   const dati = datiImportati ?? luoghi;
   const titoli = new Set(dati.map((l) => normalizzaTitolo(l.title)));
   const daGeocodificare = estrazione.filter((p) => !titoli.has(normalizzaTitolo(p.titolo))).length;
-  return Math.max(4.4, daGeocodificare * 4.4);
+  return Math.max(2, Math.round(daGeocodificare * 2));
+}
+
+// secondi interi → «1 min 45» / «45 sec»: il tempo atteso si legge a un colpo
+function formatTempo(sec) {
+  const m = Math.floor(sec / 60);
+  const r = sec % 60;
+  if (m <= 0) return r + " sec";
+  return (r ? m + " min " + r : m + " min");
 }
 async function eseguiImport(file) {
   const testo = await file.text();
@@ -1547,7 +1554,7 @@ async function eseguiImport(file) {
   if (
     !confirm(
       "Importare " + estrazione.length + " località dal file «" + file.name + "»?" +
-        (conFoto ? "\n(con " + (fileFotoSelezionati.length - 3) + " immagini dalla cartella (− 3 icone del sito): diventano miniature incorporate)"
+        (conFoto ? "\n(con " + (fileFotoSelezionati.length - 3) + " immagini dalla cartella: diventano miniature incorporate)"
                  : "\n(senza cartella immagini: luoghi senza miniature)" ) +
         "\n\n- orari e indirizzi vengono allineati alla fonte\n" +
         "- le località nuove vengono geocodificate (Nominatim, poi click sulla mappa)\n" +
@@ -1556,7 +1563,7 @@ async function eseguiImport(file) {
     )
   )
     return;
-  mostraImportMsg("Import in corso (geocodifica dei luoghi nuovi: fino a ~" + stimaSecondiGeocodifica(estrazione) + " sec.)…");
+  mostraImportMsg("Import in corso (geocodifica dei luoghi nuovi: fino a " + formatTempo(stimaSecondiGeocodifica(estrazione)) + ")…");
   try {
     const fotoPerCodice = new Map();
     for (const p of estrazione) {
