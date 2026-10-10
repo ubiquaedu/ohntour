@@ -1473,7 +1473,7 @@ function miniaturaDaFile(file, codice) {
 eseguiImportBtn.addEventListener("click", async () => {
   if (!fileHtmlSelezionato) {
     mostraImportMsg(
-      "Manca il file HTML: 1) sul sito openhousenapoli.org, autenticato, apri la pagina «My tour»; 2) Ctrl+S → «Pagina web, completa»; 3) qui riempi la zona «📄 File HTML» (la cartella foto è opzionale, serve solo per le miniature). La procedura completa è nel titolo della zona.",
+      "Manca il file HTML: 1) sul sito openhousenapoli.org, autenticato, apri la pagina «My tour»; 2) salvala in formato HTML (Ctrl+S o Salva con nome, «Pagina web, completa»); 3) qui riempi la zona «📄 File HTML» (la cartella foto è opzionale, serve solo per le miniature). La procedura completa è sopra le zone.",
       "err"
     );
     return;
@@ -1490,7 +1490,7 @@ async function eseguiImport(file) {
     mostraImportMsg(
       "Nessun luogo riconosciuto nel file «" + file.name + "». La procedura corretta:\n" +
         "1) sul sito openhousenapoli.org, autenticato, apri la pagina «My tour» (i tuoi preferiti);\n" +
-        "2) salva la pagina dal browser: Ctrl+S → tipo «Pagina web, completa»;\n" +
+        "2) salva la pagina in formato HTML (Ctrl+S, tipo «Pagina web, completa»);\n" +
         "3) qui riempi la zona «📄 File HTML» e premi «⬇ Esegui import» (cartella foto opzionale, per le miniature).",
       "err"
     );
