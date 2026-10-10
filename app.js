@@ -26,10 +26,14 @@ const posizionaBanner = document.getElementById("posizionaBanner");
 const posizionaTesto = document.getElementById("posizionaTesto");
 const posizionaSalta = document.getElementById("posizionaSalta");
 const posizionaAnnulla = document.getElementById("posizionaAnnulla");
-const importFileBtn = document.getElementById("importFileBtn");
 const importFileInput = document.getElementById("importFileInput");
-const importFotoBtn = document.getElementById("importFotoBtn");
 const importFotoInput = document.getElementById("importFotoInput");
+// import a due zone: etichette e stato corrente, più il pulsante che lancia
+const zonaFileEl = document.getElementById("zonaFile");
+const zonaFileTestoEl = document.getElementById("zonaFileTesto");
+const zonaFotoEl = document.getElementById("zonaFoto");
+const zonaFotoTestoEl = document.getElementById("zonaFotoTesto");
+const eseguiImportBtn = document.getElementById("eseguiImportBtn");
 const esportaStatoBtn = document.getElementById("esportaStatoBtn");
 const importaStatoBtn = document.getElementById("importaStatoBtn");
 const importaStatoInput = document.getElementById("importaStatoInput");
@@ -319,7 +323,8 @@ async function immagineSeEsiste(codice) {
 // le tappe cancellate presenti, aggiunge i luoghi nuovi (geocodificati se
 // possibile). fotoPerCodice (opzionale): mappe codice → data URL della
 // miniatura letta dalla cartella «…_files» del salvataggio browser.
-// Ritorna il riepilogo ({aggiornati, aggiunti, senzaCoord, messaggi: []}).
+// Ritorna {aggiornati, aggiunti, senzaCoord, messaggi} — i messaggi elencano
+// solo ciò che va verificato (senzaCoord) + miniature incorporate.
 async function applicaImport(estrazione, fotoPerCodice = new Map()) {
   if (!datiImportati) datiImportati = luoghi.map((l) => ({ ...l }));
   const base = datiImportati;
@@ -364,15 +369,15 @@ async function applicaImport(estrazione, fotoPerCodice = new Map()) {
     }
   }
   const messaggi = [];
-  if (aggiornati.length) messaggi.push("Orari/indirizzi aggiornati: " + aggiornati.join(", "));
-  if (aggiunti.length) messaggi.push("Località aggiunte: " + aggiunti.join(", "));
+  // Il riepilogo mostra SOLO ciò che va verificato (luoghi senza coordinate):
+  // aggiornamenti e aggiunte restano silenziosi (richiesta esplicita).
   // conteggio solo delle miniature VERAMENTE incorporate (data URL dalla
   // cartella foto), non degli asset di riserva assets/ohn-<codice>.jpg
   const incorporate = [...fotoPerCodice.keys()].filter((c) =>
     base.some((l) => l.id === "ohn-" + c && (l.image ?? "").startsWith("data:"))
   ).length;
   if (incorporate) messaggi.push("Miniature incorporate: " + incorporate + " foto dalla cartella");
-  if (senzaCoord.length) messaggi.push("⚠ Coordinate non trovate: si riprova con Nominatim (nome del luogo) e poi si chiede il click sulla mappa: " + senzaCoord.join(", "));
+  if (senzaCoord.length) messaggi.push("⚠ Coordinate non trovate: "+ senzaCoord.join(", ") + "\n→ usa 🎯 sulla card per posizionarli dalla lista (prima si riprova Nominatim)");
   if (!messaggi.length) messaggi.push("Nessuna differenza: i dati sono già allineati alla fonte.");
   salvaImportati();
   return { aggiornati, aggiunti, senzaCoord, messaggi };
@@ -1380,34 +1385,56 @@ function riepilogoImport(res) {
   ricostruisciMarker();
   aggiornaTutto();
   bannerRiepilogo = res.messaggi.join("\n");
-  const daPosizionare = datiCompleti().filter((l) => l.lat == null || l.lon == null);
-  if (daPosizionare.length) {
-    // coda automatica di posizionamento: il banner guida luogo per luogo
-    codaPosizionamento = daPosizionare.map((l) => l.id);
-    prossimaPosizione();
-  } else {
-    bannerAutochiudente(bannerRiepilogo + "\n✓ Tutti i luoghi hanno le coordinate.");
-    bannerRiepilogo = "";
-  }
+  // niente coda di posizionamento automatica (richiesta: l'import non deve
+  // aspettare la mappa): si segnala SOLO chi non è stato trovato, il "+ usa
+  // 🎯" indica che si posiziona poi dalla lista, a ritmo dell'utente
+  bannerAutochiudente(
+    bannerRiepilogo +
+      "\n🎯 I luoghi ⚠ si posizionano poi dalla lista: pulsante 🎯 sulla loro card.",
+    12000
+  );
+  bannerRiepilogo = "";
 }
 
-importFileBtn.addEventListener("click", () => importFileInput.click());
-importFotoBtn.addEventListener("click", () => importFotoInput.click());
+// click su una zona = apre il selettore file/cartella nascosto dentro la label
+zonaFotoEl.addEventListener("click", () => importFotoInput.click());
+zonaFileEl.addEventListener("click", () => importFileInput.click());
 
-// Cartella foto scelta con «🖼 Cartella foto»: i FILE (già scaricati dal
-// browser nel salvataggio «Pagina web, completa») restano qui finché l'utente
-// preme «📄 Importa HTML», che li consuma e azzera la selezione.
+// Zona 1 (OPZIONALE): cartella foto «…_files» del salvataggio browser. I file
+// restano QUI finché l'utente preme «⬇ Esegui import», che li consuma e azzera
+// la selezione (le etichette di stato si aggiornano con aggiornaZoneImport()).
 let fileFotoSelezionati = [];
+let fileHtmlSelezionato = null;
 importFotoInput.addEventListener("change", () => {
   const tutti = [...(importFotoInput.files ?? [])];
   fileFotoSelezionati = tutti.filter((f) => /\.(jpe?g|png|webp)$/i.test(f.name) && /\d+/.test(f.name));
-  if (fileFotoSelezionati.length) {
-    mostraImportMsg
-      ? bannerAutochiudente(`🖼 ${fileFotoSelezionati.length} foto nella cartella: ora premi «📄 Importa HTML».`, 6000)
-      : null;
-  }
-  importFotoInput.value = "";
+  importFotoInput.value = ""; // riscegliere la stessa cartella: riparte l'evento
+  aggiornaZoneImport();
+  if (fileFotoSelezionati.length)
+    bannerAutochiudente(`🖼 ${fileFotoSelezionati.length} foto nella cartella: ora scegli il file HTML e premi «⬇ Esegui import».`, 6000);
 });
+
+// Zona 2 (fondamentale): il file .html di «My tour». NON lo si consuma subito:
+// l'import parte col click su «⬇ Esegui import» (e il reimport dello stesso
+// file resta possibile rimandando l'import a «⬇ Esegui import»).
+importFileInput.addEventListener("change", () => {
+  fileHtmlSelezionato = importFileInput.files?.[0] ?? null;
+  importFileInput.value = ""; // riscegliere lo stesso file: riparte l'evento
+  aggiornaZoneImport();
+});
+
+// stato visivo delle due zone + abilitazione di «Esegui import»
+function aggiornaZoneImport() {
+  zonaFotoEl.classList.toggle("piena", fileFotoSelezionati.length > 0);
+  zonaFotoTestoEl.textContent = fileFotoSelezionati.length
+    ? `✅ ${fileFotoSelezionati.length} foto pronte`
+    : "nessuna cartella scelta (import senza miniature)";
+  zonaFileEl.classList.toggle("piena", !!fileHtmlSelezionato);
+  zonaFileTestoEl.textContent = fileHtmlSelezionato
+    ? `✅ ${fileHtmlSelezionato.name}`
+    : "nessun file scelto";
+  eseguiImportBtn.disabled = !fileHtmlSelezionato;
+}
 
 // Miniatura da file locale: ridimensiona via canvas a 200 px e produce un
 // data URL (l'immagine viaggia dentro i dati dell'import: niente richieste
@@ -1440,10 +1467,23 @@ function miniaturaDaFile(file, codice) {
   });
 }
 
-importFileInput.addEventListener("change", async () => {
-  const file = importFileInput.files?.[0];
-  if (!file) return;
-  importFileInput.value = ""; // reimport dello stesso file: ricarica l'evento
+// «⬇ Esegui import»: il pulsante lancia l'import con le DUE selezioni delle
+// zone sopra (file HTML obbligatorio, cartella foto opzionale). Fallisce con
+// avviso se il file HTML manca (la cartella non basta da sola).
+eseguiImportBtn.addEventListener("click", async () => {
+  if (!fileHtmlSelezionato) {
+    mostraImportMsg(
+      "Manca il file HTML: 1) sul sito openhousenapoli.org, autenticato, apri la pagina «My tour»; 2) Ctrl+S → «Pagina web, completa»; 3) qui riempi la zona «📄 File HTML» (la cartella foto è opzionale, serve solo per le miniature). La procedura completa è nel titolo della zona.",
+      "err"
+    );
+    return;
+  }
+  await eseguiImport(fileHtmlSelezionato);
+});
+
+// import del file .html (con o senza cartella foto): estrazione, conferma,
+// abbinamento foto → data URL, applicaImport e riepilogo SOLO avvisi 🎯.
+async function eseguiImport(file) {
   const testo = await file.text();
   const estrazione = estraiLuoghiDaHTML(testo);
   if (!estrazione.length) {
@@ -1451,7 +1491,7 @@ importFileInput.addEventListener("change", async () => {
       "Nessun luogo riconosciuto nel file «" + file.name + "». La procedura corretta:\n" +
         "1) sul sito openhousenapoli.org, autenticato, apri la pagina «My tour» (i tuoi preferiti);\n" +
         "2) salva la pagina dal browser: Ctrl+S → tipo «Pagina web, completa»;\n" +
-        "3) qui premi «📄 Importa HTML» e scegli quel file.",
+        "3) qui riempi la zona «📄 File HTML» e premi «⬇ Esegui import» (cartella foto opzionale, per le miniature).",
       "err"
     );
     return;
@@ -1460,10 +1500,12 @@ importFileInput.addEventListener("change", async () => {
   if (
     !confirm(
       "Importare " + estrazione.length + " località dal file «" + file.name + "»?" +
-        (conFoto ? "\n(con " + fileFotoSelezionati.length + " foto dalla cartella: diventano miniature incorporate)" : "") +
+        (conFoto ? "\n(con " + fileFotoSelezionati.length + " foto dalla cartella: diventano miniature incorporate)"
+                 : "\n(senza cartella foto: luoghi senza miniature)" ) +
         "\n\n- orari e indirizzi vengono allineati alla fonte\n" +
         "- le località nuove vengono geocodificate (Nominatim, poi click sulla mappa)\n" +
-        "- le tappe cancellate per errore tornano nell'elenco"
+        "- le tappe cancellate per errore tornano nell'elenco\n" +
+        "- i luoghi non geocodificati si segnalano e si posizionano poi con 🎯 dalla lista"
     )
   )
     return;
@@ -1481,9 +1523,13 @@ importFileInput.addEventListener("change", async () => {
   } catch (e) {
     mostraImportMsg("Errore durante l'import: " + e.message, "err");
   } finally {
-    fileFotoSelezionati = []; // le foto si consumano con l'import
+    // le selezioni si consumano a import riuscito (o errore): le zone tornano
+    // vuote e «Esegui import» si disabilita finché non si risceglie il file
+    fileFotoSelezionati = [];
+    fileHtmlSelezionato = null;
+    aggiornaZoneImport();
   }
-});
+}
 
 // trasferimento stato PC ↔ mobile: esporta dati importati + correzioni + scelte
 function scaricaJSON(nome, oggetto) {

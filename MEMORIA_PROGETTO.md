@@ -16,12 +16,15 @@
 - **Layout**: header con ricerca e campo 🔒 password; **#adminBar** subito
   sotto (nascosta fino allo sblocco); sotto, griglia PC **mappa a sinistra,
   lista a destra** (mobile: mappa sopra, lista sotto, pagina che scrolla).
-- **Strumenti admin** (password «26», campo 🔒): 📄 Importa HTML ·
-  ⬇ Esporta stato · ⬆ Importa stato · 🗑 Svuota dati.
-- **Posizionamento guidato**: finito l'import, per ogni luogo senza
-  coordinate l'app tenta PRIMA Nominatim (`riprovaGeocodifica`: indirizzo,
-  poi titolo). Solo se fallisce: banner «clicca il punto esatto» con
-  Salta/Annulla (Esc). I rimasti in sospeso: in fondo alla lista con
+- **Strumenti admin** (password «26», campo 🔒): zona 🖼 Cartella foto
+  (opzionale) · zona 📄 File HTML · ⬇ Esegui import · ⬇ Esporta stato ·
+  ⬆ Importa stato · 🗑 Svuota dati.
+- **Posizionamento a ritmo dell'utente**: finito l'import, avviso con i
+  luoghi senza coordinate (NESSUNA coda automatica: l'import non aspetta la
+  mappa). Per ogni luogo, il pulsante 🎯 sulla card tenta PRIMA Nominatim
+  (`riprovaGeocodifica`: indirizzo, poi titolo). Solo se fallisce: banner
+  «clicca il punto esatto» con Salta/Annulla (Esc). I rimasti in
+  sospeso: in fondo alla lista con
   🎯 Posiziona (bordo arancio). Coordinate = correzione `correzioni[id]`.
 - **Segnalibri per giornata** («tour personale»): solo nelle viste di
   giorno; `mytour-scelte-per-giorno-v1`; contatore e «↺ Reset segnalibri»
@@ -84,7 +87,21 @@ Chiavi vecchie NON più usate: `mytour-scelte-v1` (globale),
 
 ## Import (dettagli implementativi)
 
-- **📄 Importa HTML** è l'unica strada (dal 09/10/2026): il vecchio «🌐
+- **Import a due zone** (dal 10/10/2026): nella barra admin le due zone
+  tratteggiate — 1) «🖼 Cartella foto» **opzionale** (input `webkitdirectory`:
+  la cartella `…_files` di Ctrl+S) e 2) «📄 File HTML «My tour»»
+  (fondamentale) — più il pulsante **«⬇ Esegui import»** che lancia l'import
+  con entrambe le selezioni. Le zone mostrano lo stato corrente (
+  «✅ N foto pronte» / «✅ nomefile.html»); a import riuscito le selezioni si
+  consumano e le zone tornano vuote. Il solo file HTML = import valido senza
+  miniature (niente foto rotte; fallback `assets/ohn-<codice>.jpg`).
+- **Niente più coda di posizionamento automatica** all'import (dal
+  10/10/2026, richiesta utente: l'import non deve aspettare la mappa):
+  `riepilogoImport` mostra SOLO il banner di riepilogo con l'avviso ⚠ dei
+  luoghi non trovati + l'istruzione 🎯 («usa il pulsante 🎯 sulla card»),
+  autochiudente. Il meccanismo a coda resta per il posizionamento manuale
+  da singola card (🎯 → riprova Nominatim → click mappa, Salta/Annulla, Esc).
+- **📄 Importa HTML** è l'unica strada per i dati (dal 09/10/2026): il vecchio «🌐
   Importa dal sito» (fetch di `preferiti.php` con `credentials:"include"`)
   è stato RIMOSSO — openhousenapoli.org non manda header CORS, quindi da
   myohntour.pages.dev (e da qualunque altro dominio) il browser blocca la
@@ -93,7 +110,7 @@ Chiavi vecchie NON più usate: `mytour-scelte-v1` (globale),
   sessione. La via affidabile: l'utente salva la pagina «My tour» dal
   browser (Ctrl+S, «Pagina web, completa») e l'app la legge da file
   (lettura permessa perché il file è scelto esplicitamente dall'utente).
-  Il flusso è documentato nel title del pulsante, nel messaggio d'errore
+  Il flusso è documentato nei title delle zone, nel messaggio d'errore
   «nessun luogo riconosciuto» e nel README.
 - Parser `estraiLuoghiDaHTML` (per ogni `<tr>`:
      `<b>` titolo + link `location.php?l=<n>` che lo CONTIENE; indirizzo e

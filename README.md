@@ -63,29 +63,37 @@ poi apri http://localhost:8123/ — oppure con l'estensione Live Server di VS Co
 
 Dopo lo sblocco compaiono, **sotto l'header** (raggiungibili anche su mobile):
 
-- **📄 Importa HTML**: l'unica strada per riempire la lista. La procedura:
-  1. sul sito **openhousenapoli.org**, con la tua autenticazione, apri la
-     pagina **«My tour»** (i tuoi preferiti);
-  2. salva la pagina dal browser: **Ctrl+S**, tipo **«Pagina web, completa»**
-     (oltre al file `.html` crea anche una cartella `…_files` con le foto);
-  3. nell'app, premi **«📄 Importa HTML»** e scegli il file `.html`.
-- **🖼 Cartella foto** (opzionale, per le miniature): prima dell'import,
-  premi **«🖼 Cartella foto»** e scegli la cartella `…_files` creata al punto
-  2 — contiene già le foto scaricate dal browser. L'import le ridimensiona
-  (200 px) e le **incorpora nei dati**: nessuna richiesta al sito (che
-  blocca le richieste da altri domini), funziona offline e su mobile.
-  Con l'import successivo le foto si riabbiano anche alle località già
-  presenti (si aggiornano solo quelle senza immagine).
+- **Import a due zone** (nella barra admin): si capisce a occhi che per le
+  miniature servono DUE cose, ma la cartella è **opzionale** — il solo file
+  HTML riempie la lista (senza foto).
+  1. **🖼 Cartella foto (opzionale)**: scegli la cartella `…_files` creata da
+     Ctrl+S — contiene già le foto scaricate dal browser. L'import le
+     ridimensiona (200 px) e le **incorpora nei dati**: nessuna richiesta al
+     sito (che blocca le richieste da altri domini), funziona offline e su
+     mobile. Con l'import successivo le foto si riabbiano anche alle
+     località già presenti (si aggiornano solo quelle senza immagine).
+  2. **📄 File HTML «My tour»**: scegliere il file `.html` — l'unica
+     selezione indispensabile. La procedura:
+     - sul sito **openhousenapoli.org**, con la tua autenticazione, apri la
+       pagina **«My tour»** (i tuoi preferiti);
+     - salva la pagina dal browser: **Ctrl+S**, tipo **«Pagina web,
+       completa»** (oltre al file `.html` crea anche una cartella `…_files`
+       con le foto);
+     - nell'app, riempi la zona «📄 File HTML» e premi **«⬇ Esegui import»**.
+  Le due selezioni si consumano a import riuscito: le zone tornano vuote e
+  si ricomincia (reimportare lo stesso file = risceglierlo).
 - **Miniature di riserva**: se esiste `assets/ohn-<codice>.jpg` (codice =
   numero `l=` della scheda) viene usata quando manca la cartella; per una
   miniatura manuale: apri la scheda del luogo su openhousenapoli.org,
   scarica la foto principale, riducila a 200px e salvala come
   `assets/ohn-<codice>.jpg`.
-- **Posizionamento guidato**: finito l'import, per ogni luogo senza
-  coordinate l'app tenta PRIMA la geocodifica Nominatim (indirizzo, poi
-  titolo). Solo se non trova nulla chiede il click sulla mappa («clicca il
-  punto esatto», Salta/Annulla). I luoghi rimasti in sospeso restano in fondo
-  alla lista con 🎯 **Posiziona**.
+- **Posizionamento a ritmo tuo**: finito l'import, l'app segnala con un
+  avviso i luoghi rimasti senza coordinate (e non blocca l'attesa del
+  click sulla mappa). Per ogni luogo: il pulsante 🎯 su card tenta PRIMA la
+  geocodifica Nominatim (indirizzo, poi titolo), poi, se non trova nulla,
+  chiede il click sulla mappa («clicca il punto esatto», Salta/Annulla).
+  I luoghi rimasti in sospeso restano in fondo alla lista con 🎯
+  **Posiziona**.
 - **✕ = esclusa SOLO dal giorno selezionato**: nelle viste di giornata la ✕
   toglie la località dal piano **solo di quel giorno** (reversibile). I
   segnalibri degli altri giorni restano e non vengono mai toccati.
