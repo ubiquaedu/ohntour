@@ -41,6 +41,8 @@
     </label>
     <button id="eseguiImportBtn" class="btn btn-small" type="button" disabled
       title="Parte l'import con le selezioni sopra: il file HTML è il minimo indispensabile, la cartella immagini è opzionale (niente cartella = luoghi senza miniature).">⬇ Esegui import</button>
+    <button id="posizionaTuttiBtn" class="btn btn-small" type="button" hidden
+      title="Cerca automaticamente la posizione di tutti i luoghi che ne restano privi (o li fa click sulla mappa a uno a uno): niente di manuale, card per card">🎯 Posiziona tutti</button>
     <button id="esportaStatoBtn" class="btn btn-ghost btn-small" type="button"
       title="Scarica un JSON con dati importati, correzioni, esclusioni e scelte — per trasferirli su un altro dispositivo">⬇ Esporta stato</button>
     <button id="importaStatoBtn" class="btn btn-ghost btn-small" type="button"
@@ -93,8 +95,8 @@
   </div>
 
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-  <!-- v=2 in query: la modifica a app.js non si vede finché la cache Edge non scade;
+  <!-- v in query: la modifica a app.js non si vede finché la cache Edge non scade;
        si aumenta a ogni rilascio comportamentale (veste nota in AGENTS.md) -->
-  <script type="module" src="app.js?v=3"></script>
+  <script type="module" src="app.js?v=4"></script>
 </body>
 </html>

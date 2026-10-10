@@ -39,6 +39,7 @@ const importaStatoBtn = document.getElementById("importaStatoBtn");
 const importaStatoInput = document.getElementById("importaStatoInput");
 const svuotaDatiBtn = document.getElementById("svuotaDatiBtn");
 const importStatoEl = document.getElementById("importStato");
+const posizionaTuttiBtn = document.getElementById("posizionaTuttiBtn");
 const adminPassEl = document.getElementById("adminPass");
 
 const STORAGE_KEY = "mytour-mappa-correzioni-v1";
@@ -310,7 +311,14 @@ async function geocodifica(indirizzo, titolo = "") {
       const r = await fetch(url, { headers: { Accept: "application/json" } });
       if (r.ok) {
         const arr = await r.json();
-        if (arr.length) return { lat: parseFloat(arr[0].lat), lon: parseFloat(arr[0].lon) };
+        if (arr.length) {
+          const t = arr[0];
+          // un risultato che è la CITTÀ STESSA (query ridotta a «999, Napoli»)
+          // NON è l'indirizzo del luogo: storicamente poneva i luoghi al
+          // centro città. Lo scartiamo e si passa alla variante successiva.
+          if (t.addresstype === "city" || t.category === "boundary") continue;
+          return { lat: parseFloat(t.lat), lon: parseFloat(t.lon) };
+        }
       }
     } catch { /* riprova con la variante successiva */ }
     await new Promise((res) => setTimeout(res, 1100)); // pausa Nominatim
@@ -411,7 +419,7 @@ async function applicaImport(estrazione, fotoPerCodice = new Map()) {
     base.some((l) => l.id === "ohn-" + c && (l.image ?? "").startsWith("data:"))
   ).length;
   if (incorporate) messaggi.push("Miniature incorporate: " + incorporate + " immagini dalla cartella");
-  if (senzaCoord.length) messaggi.push("⚠ Coordinate non trovate: "+ senzaCoord.join(", ") + "\n→ usa 🎯 sulla card per posizionarli dalla lista (prima si riprova Nominatim)");
+  if (senzaCoord.length) messaggi.push("⚠ Posizione non trovata per: "+ senzaCoord.join(", ") + "\n→ premi «🎯 Posiziona tutti» qui sopra, oppure 🎯 sulla card del luogo, quando vuoi.");
   if (!messaggi.length) messaggi.push("Nessuna differenza: i dati sono già allineati alla fonte.");
   salvaImportati();
   return { aggiornati, aggiunti, senzaCoord, messaggi };
@@ -1003,12 +1011,12 @@ function eliminaTappa(id) {
     esclusioni[giornoFiltro].delete(id);
     salvaScelte();
     salvaEsclusioni();
-    bannerAutochiudente(`↺ «${titolo}» tolta dal piano di ${ETICHETTA_GIORNO[giornoFiltro]}.`);
+    statoRiga(`↺ «${titolo}» tolta dal piano di ${ETICHETTA_GIORNO[giornoFiltro]}.`);
   } else {
     esclusioni[giornoFiltro].add(id);
     salvaEsclusioni();
     const conStella = Object.keys(scelte).filter((g) => scelte[g].has(id));
-    bannerAutochiudente(
+    statoRiga(
       `✕ «${titolo}» esclusa da ${ETICHETTA_GIORNO[giornoFiltro]}.` +
         (conStella.length ? ` Resta nei giorni: ${conStella.map((g) => ETICHETTA_GIORNO[g]).join(", ")} (segnalibro).` : "") +
         " Ripristino con ↺ in fondo alla lista."
@@ -1033,7 +1041,7 @@ function ripristinaTappa(id) {
   }
   salvaEsclusioni();
   if (tolti) {
-    bannerAutochiudente(
+    statoRiga(
       `↺ «${campo(luogo, "title")}» ripristinata ${giornoFiltro ? "in " + ETICHETTA_GIORNO[giornoFiltro] : "in tutti i giorni"}.`
     );
   }
@@ -1253,7 +1261,7 @@ function adminMode() {
 function aggiornaBadgeVerifica() {
   const senzaCoord = datiCompleti().filter((l) => l.lat == null || l.lon == null).length;
   contatoreEl.hidden = senzaCoord === 0 || !adminMode();
-  contatoreEl.title = "Tappe senza coordinate: clicca 🎯 sulla card per posizionarle sulla mappa";
+  contatoreEl.title = "Tappe da posizionare sulla mappa: premi «🎯 Posiziona tutti» qui sopra";
   contatoreEl.textContent = `⚠ ${senzaCoord} da posizionare`;
 }
 
@@ -1282,31 +1290,33 @@ function fermaPosizionamento() {
   posizionaBanner.hidden = true;
 }
 
+// Messaggi del POSIZIONAMENTO: SOLO il click sulla mappa resta nel banner
+// (che serve a puntare la mappa); tutto il resto va nella riga di stato
+// (richiesta: leggibile, sopra i messaggi galleggianti).
+function statoRiga(testo) {
+  importStatoEl.hidden = false;
+  importStatoEl.textContent = testo;
+  importStatoEl.classList.remove("stato-err");
+}
+
 async function prossimaPosizione() {
   const id = codaPosizionamento.shift();
   posizionaCorrente = id ?? null;
   if (!id) {
-    // fine coda: il messaggio dipende da quanto è rimasto indietro (Salti)
+    // fine coda: il messaggio era già lungamente autochie
     const rimasti = datiCompleti().filter((l) => l.lat == null || l.lon == null);
-    bannerAutochiudente(
-      bannerRiepilogo +
-        (rimasti.length
-          ? `\n⚠ ${rimasti.length} ${rimasti.length === 1 ? "luogo resta" : "luoghi restano"} senza coordinate: usa 🎯 sulla sua card quando vuoi posizionarl${rimasti.length === 1 ? "o" : "i"}.`
-          : "\n✓ Tutti i luoghi hanno le coordinate."),
-      9000
+    statoRiga(
+      rimasti.length
+        ? `⚠ ${rimasti.length} ${rimasti.length === 1 ? "luogo resta" : "luoghi restano"} da posizionare: premi «🎯 Posiziona tutti» di nuovo, oppure 🎯 sulla sua card quando vuoi.`
+        : "✓ Tutti i luoghi hanno la posizione sulla mappa."
     );
-    bannerRiepilogo = "";
     aggiornaTutto();
     return;
   }
   const l = datiCompleti().find((x) => x.id === id);
-  // PRIMA la geocodifica (indirizzo e nome), poi il click sulla mappa: se
-  // Nominatim risolve il luogo non serve che l'utente lo piazzzi a mano
-  mostraBanner(
-    (bannerRiepilogo ? bannerRiepilogo + "\n" : "") +
-      `🔎 Cerco «${l?.title ?? id}» su OpenStreetMap…`,
-    false
-  );
+  // PRIMA la ricerca automatica (indirizzo e nome), poi il click sulla mappa:
+  // se la ricerca risolve il luogo non serve puntarlo a mano
+  statoRiga(`🔎 Cerco la posizione di «${l?.title ?? id}»…`);
   const trovato = await riprovaGeocodifica(id);
   if (posizionaCorrente !== id) return; // annullata nel frattempo
   if (trovato) {
@@ -1314,18 +1324,39 @@ async function prossimaPosizione() {
     return;
   }
   posizionaCorrente = id;
-  mostraBanner(
-    (bannerRiepilogo ? bannerRiepilogo + "\n" : "") +
-      `📍 Posiziona «${l?.title ?? id}» sulla mappa: clicca il punto esatto.` +
-      (codaPosizionamento.length ? ` (${codaPosizionamento.length} dopo questo)` : ""),
-    true
+  statoRiga(
+    `📍 «${l?.title ?? id}»: posizione non trovata — clicca il punto esatto sulla mappa.` +
+      (codaPosizionamento.length ? ` (restano ${codaPosizionamento.length} dopo questo)` : "")
   );
+  mostraBanner(`📍 Posiziona «${l?.title ?? id}» sulla mappa: clicca il punto esatto.`, true);
   aggiornaTutto();
 }
 
 function avviaPosizionamento(id) {
   codaPosizionamento = [id];
   prossimaPosizione();
+}
+
+// «🎯 Posiziona tutti»: coda su OGNI luogo privo di posizione (richiesta:
+// un solo pulsante, niente card per card). Il singolo luogo che non si
+// trova da solo chiederà il click sulla mappa, con Salta per proseguire.
+posizionaTuttiBtn.addEventListener("click", () => {
+  const daPosizionare = datiCompleti().filter((l) => l.lat == null || l.lon == null);
+  if (!daPosizionare.length) {
+    importStatoEl.hidden = false;
+    importStatoEl.textContent = "ℹ️ Tutti i luoghi hanno già una posizione sulla mappa.";
+    importStatoEl.classList.remove("stato-err");
+    return;
+  }
+  codaPosizionamento = daPosizionare.map((l) => l.id);
+  prossimaPosizione();
+});
+
+// visibilità del pulsante: solo admin (la barra è già admin-only) e solo
+// quando serve, cioè c'è almeno un luogo senza posizione
+function aggiornaPosizionaTutti() {
+  const servono = datiCompleti().some((l) => l.lat == null || l.lon == null);
+  posizionaTuttiBtn.hidden = !adminMode() || !servono;
 }
 
 posizionaSalta.addEventListener("click", () => prossimaPosizione());
@@ -1379,6 +1410,7 @@ function aggiornaTutto() {
   renderLista();
   refreshConflitti();
   aggiornaBadgeVerifica();
+  aggiornaPosizionaTutti();
 }
 
 // Gli strumenti admin stanno NELLA PAGINA PRINCIPALE: la barra #adminBar
@@ -1386,18 +1418,7 @@ function aggiornaTutto() {
 // o il vecchio ?verifica=1, storico).
 function aggiornaAdminUI() {
   adminBar.hidden = !adminMode();
-  if (accessoImpostazioni && !posizionaCorrente && codaPosizionamento.length === 0) {
-    const vai = new URLSearchParams(location.search).get("vai");
-    if (!vai) {
-      // apertura diretta via URL: si offre il posizionamento di chi non ce l'ha
-      const daPosizionare = datiCompleti().filter((l) => l.lat == null || l.lon == null);
-      if (daPosizionare.length) {
-        bannerRiepilogo = "⚠ " + daPosizionare.length + " luoghi senza coordinate.";
-        codaPosizionamento = daPosizionare.map((l) => l.id);
-        prossimaPosizione();
-      }
-    }
-  }
+  aggiornaPosizionaTutti();
 }
 
 // ---------- import: fonte primaria dei dati ----------
@@ -1447,7 +1468,9 @@ importFotoInput.addEventListener("change", () => {
   importFotoInput.value = ""; // riscegliere la stessa cartella: riparte l'evento
   aggiornaZoneImport();
   if (fileFotoSelezionati.length)
-    bannerAutochiudente(`🖼 ${fileFotoSelezionati.length - 3} immagini nella cartella: ora premi «⬇ Esegui import» (il file HTML va scelto prima).`, 6000);
+    importStatoEl.hidden = false;
+    importStatoEl.textContent = `🖼 ${fileFotoSelezionati.length - 3} immagini nella cartella: ora premi «⬇ Esegui import» (il file HTML va scelto prima).`;
+    importStatoEl.classList.remove("stato-err");
 });
 
 // Zona 2 (fondamentale): il file .html di «My tour». NON lo si consuma subito:
@@ -1557,13 +1580,13 @@ async function eseguiImport(file) {
         (conFoto ? "\n(con " + (fileFotoSelezionati.length - 3) + " immagini dalla cartella: diventano miniature incorporate)"
                  : "\n(senza cartella immagini: luoghi senza miniature)" ) +
         "\n\n- orari e indirizzi vengono allineati alla fonte\n" +
-        "- le località nuove vengono geocodificate (Nominatim, poi click sulla mappa)\n" +
+        "- le posizioni dei luoghi nuove vengono cercate automaticamente\n" +
         "- le tappe cancellate per errore tornano nell'elenco\n" +
-        "- i luoghi non geocodificati si segnalano e si posizionano poi con 🎯 dalla lista"
+        "- se qualche posizione non si trova, te lo dico in fondo e si posiziona con «🎯 Posiziona tutti» o dalla lista"
     )
   )
     return;
-  mostraImportMsg("Import in corso (geocodifica dei luoghi nuovi: fino a " + formatTempo(stimaSecondiGeocodifica(estrazione)) + ")…");
+  mostraImportMsg("Import in corso (ricerca della posizione dei luoghi nuovi: fino a " + formatTempo(stimaSecondiGeocodifica(estrazione)) + ")…");
   try {
     const fotoPerCodice = new Map();
     for (const p of estrazione) {
