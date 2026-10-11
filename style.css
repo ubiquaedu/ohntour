@@ -298,27 +298,10 @@ body {
 }
 .import-stato.stato-err { color: #ff9b9b; }
 
-/* banner di posizionamento (coda automatica dopo l'import o singolo luogo):
-   flottante sopra la mappa, in alto al centro */
-#posizionaBanner {
-  position: fixed;
-  top: 64px;
-  left: 50%;
-  transform: translateX(-50%);
-  z-index: 1200;
-  max-width: min(560px, calc(100vw - 24px));
-  display: flex;
-  gap: 10px;
-  align-items: center;
-  background: rgba(11, 18, 32, 0.97);
-  border: 1px solid rgba(255, 165, 90, 0.55);
-  border-radius: 12px;
-  box-shadow: 0 6px 24px rgba(0, 0, 0, 0.45);
-  padding: 10px 14px;
-}
-#posizionaBanner[hidden] { display: none; }
-#posizionaTesto { margin: 0; font-size: 13px; line-height: 1.45; white-space: pre-line; flex: 1; }
-#posizionaBanner .btn { flex: 0 0 auto; }
+/* Salta/Annulla del posizionamento manuale: inline nella barra admin,
+   accanto alla riga di stato (nessun banner flottante) */
+#posizionaComandi { display: inline-flex; gap: 6px; margin-left: 6px; }
+#posizionaComandi[hidden] { display: none; }
 
 /* card di un luogo ancora senza coordinate (solo in modalità admin): bordo arancio */
 .card.da-posizionare { border-color: rgba(255, 165, 90, 0.55); }
@@ -531,5 +514,4 @@ body {
      a 92px l'ultimo pallino restava nascosto e il lucchetto non si leggeva */
   .pass-admin { width: 150px; }
   .pass-admin.sbloccato { width: 64px; }
-  #posizionaBanner { top: 110px; }
 }

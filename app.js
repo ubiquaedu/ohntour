@@ -22,8 +22,7 @@ const riepilogoTitoloEl = document.getElementById("riepilogoTitolo");
 const riepilogoListaEl = document.getElementById("riepilogoLista");
 const chiudiConflittiBtn = document.getElementById("chiudiConflitti");
 const adminBar = document.getElementById("adminBar");
-const posizionaBanner = document.getElementById("posizionaBanner");
-const posizionaTesto = document.getElementById("posizionaTesto");
+const posizionaComandi = document.getElementById("posizionaComandi");
 const posizionaSalta = document.getElementById("posizionaSalta");
 const posizionaAnnulla = document.getElementById("posizionaAnnulla");
 const importFileInput = document.getElementById("importFileInput");
@@ -1283,25 +1282,19 @@ function aggiornaBadgeVerifica() {
 let codaPosizionamento = []; // id dei luoghi ancora senza coordinate
 let posizionaCorrente = null; // id del luogo che aspetta il click sulla mappa
 // (bannerRiepilogo rimosso: il riepilogo va nella riga di stato)
-let bannerTimer = null;
 
+// Il vecchio banner flottante non esiste più: il messaggio di posizionamento
+// va nella RIGA DI STATO e i due comandi Salta/Annulla compaiono accanto,
+// dentro la barra admin (richiesta: niente pannelli sopra la mappa).
 function mostraBanner(testo, conAzioni) {
-  clearTimeout(bannerTimer);
-  posizionaBanner.hidden = false;
-  posizionaTesto.textContent = testo;
-  posizionaSalta.hidden = !conAzioni;
-  posizionaAnnulla.hidden = !conAzioni;
-}
-
-function bannerAutochiudente(testo, ms = 7000) {
-  mostraBanner(testo, false);
-  bannerTimer = setTimeout(() => { posizionaBanner.hidden = true; }, ms);
+  statoRiga(testo);
+  posizionaComandi.hidden = !conAzioni;
 }
 
 function fermaPosizionamento() {
   codaPosizionamento = [];
   posizionaCorrente = null;
-  posizionaBanner.hidden = true;
+  posizionaComandi.hidden = true;
 }
 
 // Messaggi del POSIZIONAMENTO: SOLO il click sulla mappa resta nel banner
@@ -1472,7 +1465,7 @@ importFotoInput.addEventListener("change", () => {
   aggiornaZoneImport();
   if (fileFotoSelezionati.length)
     importStatoEl.hidden = false;
-    importStatoEl.textContent = `🖼 ${fileFotoSelezionati.length - 3} immagini nella cartella: ora premi «⬇ Esegui import» (il file HTML va scelto prima).`;
+    importStatoEl.textContent = `🖼 ${fileFotoSelezionati.length - 3} immagini nella cartella: ora premi «⬇ Esegui import».`;
     importStatoEl.classList.remove("stato-err");
 });
 
@@ -1489,7 +1482,7 @@ importFileInput.addEventListener("change", () => {
 function aggiornaZoneImport() {
   zonaFotoEl.classList.toggle("piena", fileFotoSelezionati.length > 0);
   zonaFotoTestoEl.textContent = fileFotoSelezionati.length
-    ? `✅ ${fileFotoSelezionati.length - 3} immagini pronte (− 3 icone)`
+    ? `✅ ${fileFotoSelezionati.length - 3} immagini pronte`
     : "nessuna cartella scelta (import senza miniature)";
   zonaFileEl.classList.toggle("piena", !!fileHtmlSelezionato);
   zonaFileTestoEl.textContent = fileHtmlSelezionato
@@ -1640,14 +1633,7 @@ importaStatoBtn.addEventListener("click", () => importaStatoInput.click());
 // (dati importati, correzioni, segnalibri, esclusioni): data.js vuoto non
 // mostra nulla; la lista si ripopola con l'import. Con conferma.
 svuotaDatiBtn.addEventListener("click", () => {
-  if (!confirm(
-    "Svuotare TUTTI i dati?\n\n" +
-      "- dati importati (le località del tour)\n" +
-      "- correzioni di coordinate e testi\n" +
-      "- segnalibri (il piano dei 3 giorni)\n" +
-      "- esclusioni\n\n" +
-      "L'app riparte vuota: si ricarica con l'import (dal sito o file HTML)."
-  )) return;
+  if (!confirm("Svuotare tutti i dati?\nL'app riparte vuota.\nSi ricarica con l'import.")) return;
   for (const k of [STORAGE_IMPORTATI, STORAGE_KEY, STORAGE_SCELTE, STORAGE_ESCLUSIONI])
     localStorage.removeItem(k);
   location.replace(location.pathname); // riparte pulito (senza ?reset=1 in cronologia)

@@ -51,6 +51,12 @@
     <button id="svuotaDatiBtn" class="btn btn-ghost btn-small" type="button"
       title="Cancella TUTTI i dati locali (dati importati, correzioni, segnalibri, esclusioni): l'app riparte vuota, pronta per l'import della nuova edizione">🗑 Svuota dati</button>
     <span id="importStato" class="import-stato" hidden></span>
+    <!-- Salta/Annulla del posizionamento manuale: nella barra, accanto alla
+         riga di stato (nessun banner flottante) -->
+    <span id="posizionaComandi" hidden>
+      <button id="posizionaSalta" class="btn btn-ghost btn-small" type="button">Salta</button>
+      <button id="posizionaAnnulla" class="btn btn-ghost btn-small" type="button">Annulla</button>
+    </span>
   </div>
 
   <main class="layout">
@@ -87,16 +93,9 @@
     </aside>
   </main>
 
-  <!-- Banner per il posizionamento dei luoghi senza coordinate (coda automatica dopo l'import) -->
-  <div id="posizionaBanner" hidden>
-    <p id="posizionaTesto"></p>
-    <button id="posizionaSalta" class="btn btn-ghost btn-small" type="button">Salta</button>
-    <button id="posizionaAnnulla" class="btn btn-ghost btn-small" type="button">Annulla</button>
-  </div>
-
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
   <!-- v in query: la modifica a app.js non si vede finché la cache Edge non scade;
        si aumenta a ogni rilascio comportamentale (veste nota in AGENTS.md) -->
-  <script type="module" src="app.js?v=5"></script>
+  <script type="module" src="app.js?v=6"></script>
 </body>
 </html>
