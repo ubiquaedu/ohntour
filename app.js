@@ -1573,12 +1573,12 @@ async function eseguiImport(file) {
   if (
     !confirm(
       "Importare " + estrazione.length + " località dal file «" + file.name + "»?" +
-        (conFoto ? "\n(con " + (fileFotoSelezionati.length - 3) + " immagini dalla cartella: diventano miniature incorporate)"
+        (conFoto ? "\n(con " + (fileFotoSelezionati.length - 3) + " immagini della cartella, che diventano miniature)"
                  : "\n(senza cartella immagini: luoghi senza miniature)" ) +
-        "\n\n- orari e indirizzi vengono allineati alla fonte\n" +
-        "- le posizioni dei luoghi nuove vengono cercate automaticamente\n" +
-        "- le tappe cancellate per errore tornano nell'elenco\n" +
-        "- se qualche posizione non si trova, te lo dico in fondo e si posiziona con «🎯 Posiziona tutti» o dalla lista"
+        "\n\n- orari e indirizzi vengono aggiornati dal file inserito\n" +
+        "- le posizioni dei luoghi nuovi vengono cercate automaticamente\n" +
+        "- le tappe cancellate in precedenza tornano nell'elenco\n" +
+        "- le posizioni non trovate andranno riprovate poi con «Posiziona tutti»"
     )
   )
     return;
