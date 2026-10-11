@@ -291,6 +291,7 @@ function estraiLuoghiDaHTML(testo) {
 async function geocodifica(indirizzo, titolo = "") {
   const pulito = (indirizzo ?? "").replace(/\s+/g, " ").trim();
   if (!pulito && !titolo) return null;
+  let attese429 = 0;
   // varianti senza civico: «Via Roma 12» → «Via Roma» (utile per i luoghi
   // importati da HTML dove il numero a volte manca o è annotato in coda)
   const senzaCivico = pulito.replace(/\s+\d+[\w/]*(\s*,.*)?$/, "$1").trim();
@@ -309,6 +310,19 @@ async function geocodifica(indirizzo, titolo = "") {
       encodeURIComponent(v);
     try {
       const r = await fetch(url, { headers: { Accept: "application/json" } });
+      // 429 = servizio occupato: il riprovo subito è inutile (resta limitato).
+      // Va attesa la finestra di penalizzazione: pausa lunga e STAMPA
+      // stessa variante, con messaggio in riga di stato per l'utente.
+      // Limite di 4 attese: se anche dopo ~1 min non risponde, si passa
+      // avanti (evita un loop infinito se il servizio resta bloccato).
+      if (r.status === 429) {
+        attese429++;
+        if (attese429 > 4) { attese429 = 0; break; }
+        statoRiga("⏳ Il servizio di ricerca è molto occupato: aspetto 15 secondi e riprovo…");
+        await new Promise((res) => setTimeout(res, 15000));
+        continue; // stessa variante, non si salta alla successiva
+      }
+      attese429 = 0;
       if (r.ok) {
         const arr = await r.json();
         if (arr.length) {
@@ -1268,7 +1282,7 @@ function aggiornaBadgeVerifica() {
 // ---------- posizionamento sulla mappa (coda automatica dopo l'import, o singolo luogo) ----------
 let codaPosizionamento = []; // id dei luoghi ancora senza coordinate
 let posizionaCorrente = null; // id del luogo che aspetta il click sulla mappa
-let bannerRiepilogo = ""; // riepilogo dell'ultimo import, mostrato sopra il prompt
+// (bannerRiepilogo rimosso: il riepilogo va nella riga di stato)
 let bannerTimer = null;
 
 function mostraBanner(testo, conAzioni) {
@@ -1303,7 +1317,8 @@ async function prossimaPosizione() {
   const id = codaPosizionamento.shift();
   posizionaCorrente = id ?? null;
   if (!id) {
-    // fine coda: il messaggio era già lungamente autochie
+    // fine coda: chiudo il banner (bug: dopo l'ultimo «Salta» restava bloccato)
+    fermaPosizionamento();
     const rimasti = datiCompleti().filter((l) => l.lat == null || l.lon == null);
     statoRiga(
       rimasti.length
@@ -1360,15 +1375,9 @@ function aggiornaPosizionaTutti() {
 }
 
 posizionaSalta.addEventListener("click", () => prossimaPosizione());
-posizionaAnnulla.addEventListener("click", () => {
-  bannerRiepilogo = "";
-  fermaPosizionamento();
-});
+posizionaAnnulla.addEventListener("click", () => fermaPosizionamento());
 document.addEventListener("keydown", (e) => {
-  if (e.key === "Escape" && posizionaCorrente) {
-    bannerRiepilogo = "";
-    fermaPosizionamento();
-  }
+  if (e.key === "Escape" && posizionaCorrente) fermaPosizionamento();
 });
 
 // clic sulla mappa in modalità posizionamento: imposta le coordinate del luogo
@@ -1431,7 +1440,6 @@ function mostraImportMsg(testo, tipo = "ok") {
   // galleggiante sopra la mappa era di difficile lettura). Gli errori restano
   // visibili finché l'utente non riparte; i messaggi normali pure.
   if (tipo === "err") {
-    bannerRiepilogo = "";
     fermaPosizionamento();
   }
   importStatoEl.hidden = false;
@@ -1442,15 +1450,10 @@ function mostraImportMsg(testo, tipo = "ok") {
 function riepilogoImport(res) {
   ricostruisciMarker();
   aggiornaTutto();
-  bannerRiepilogo = res.messaggi.join("\n");
-  // niente coda di posizionamento automatica (richiesta: l'import non deve
-  // aspettare la mappa): si segnala SOLO chi non è stato trovato, il "+ usa
-  // 🎯" indica che si posiziona poi dalla lista, a ritmo dell'utente.
-  // Il riepilogo va nella riga di stato sotto i pulsanti (tested: leggere).
+  // riepilogo in riga di stato, i luoghi ⚠ con il pulsante generale
   importStatoEl.hidden = false;
-  importStatoEl.textContent = "ℹ️ " + bannerRiepilogo + "\n🎯 I luoghi ⚠ si posizionano poi dalla lista: pulsante 🎯 sulla loro card.";
+  importStatoEl.textContent = "ℹ️ " + res.messaggi.join(" — ") + "\n🎯 Usa «Posiziona tutti» per i luoghi ⚠ senza posizione.";
   importStatoEl.classList.remove("stato-err");
-  bannerRiepilogo = "";
 }
 
 // click su una zona = apre il selettore file/cartella nascosto dentro la label
