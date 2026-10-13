@@ -59,7 +59,7 @@ poi apri http://localhost:8123/ — oppure con l'estensione Live Server di VS Co
   lampeggiare); «📍 Vai» fa il contrario.
 - Deep link per condividere un punto: `?vai=<id>`.
 
-### Strumenti admin (password «26» nel campo 🔒 in alto)
+### Strumenti admin (password «» nel campo 🔒 in alto)
 
 Dopo lo sblocco compaiono, **sotto l'header** (raggiungibili anche su mobile):
 
